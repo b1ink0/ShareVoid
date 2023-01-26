@@ -1,11 +1,9 @@
 import React from 'react'
 import { useAuth } from '../context/AuthContext'
-import { useStateContext } from '../context/StateContext'
 import GoogleIcon from '../assets/GoogleIcon'
 
-export default function LogIn() {
+export default function Login() {
   const { logIn } = useAuth()
-  const { loggedIn, setLoggedIn } = useStateContext()
   return (
       <>
         <nav className="w-full h-7 bg-[color:var(--bg-secondary)] absolute top-0">

@@ -10,9 +10,9 @@ import SendIcon from '../assets/SendIcon'
 import DownloadIcon from '../assets/DownloadIcon'
 import CopyIcon from '../assets/CopyIcon'
 import Profile from './Profile'
-import LogIn from './Login'
 import { useStateContext } from '../context/StateContext'
 import { onAuthStateChanged } from 'firebase/auth'
+import Login from './Login'
 
 export default function Main() {
     const [data, setData] = useState([])
@@ -190,7 +190,7 @@ export default function Main() {
                         </form>
                     </div>
                 </>
-                : <LogIn />
+                : <Login />
             } 
         </section>
     )
