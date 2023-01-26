@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getDatabase } from "firebase/database"
 import { getStorage } from "firebase/storage";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 
 const firebaseConfig = {
     apiKey: "AIzaSyAtM-jtmD7kSjqJzmDNjZSMbUlqnTj-LIA",
@@ -24,15 +24,9 @@ export const googleHandler = async () => {
     provider.setCustomParameters({ prompt: 'select_account' });
     signInWithPopup(auth, provider)
         .then((result) => {
-            const credential = GoogleAuthProvider.credentialFromResult(result);
-            const token = credential.accessToken;
-            const user = result.user;
         })
         .catch((error) => {
-            const errorCode = error.code;
-            const errorMessage = error.message;
-            const email = error.email;
-            const credential = GoogleAuthProvider.credentialFromError(error);
+            console.log(error);
         });
 };
 
@@ -40,8 +34,10 @@ export const handleSignOut = async () => {
     signOut(auth)
         .then(() => {
             console.log('logged out');
+            return true;
         })
         .catch((error) => {
             console.log(error);
+            return false
         });
 }

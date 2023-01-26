@@ -11,14 +11,16 @@ export function useAuth() {
 
 // Creating Provider
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState();
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const logIn = () => {
     return googleHandler();
   };
   const logOut = () => {
-    return handleSignOut();
+    handleSignOut().then(d => {
+      console.log(d)
+    })
   };
 
   useEffect(() => {
