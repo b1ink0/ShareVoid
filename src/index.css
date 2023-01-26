@@ -10,7 +10,9 @@
     color: var(--text);
     fill: var(--text);
 }
-
+* {
+    font-family: 'Poppins', sans-serif;
+}
 body, html {
     width: fit-content;
     height: fit-content;
