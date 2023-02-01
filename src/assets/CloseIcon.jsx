@@ -1,6 +1,6 @@
 import React from "react";
 
-function CloseIcon({size}) {
+function CloseIcon({size = "full"}) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

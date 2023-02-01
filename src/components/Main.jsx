@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { auth, db } from '../auth/firebase'
+import { auth, db, firestore } from '../auth/firebase'
 import { storage } from '../auth/firebase'
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage"
-import { onValue, ref, set, push } from 'firebase/database'
+import { onValue, ref, set, push, limitToLast, query } from 'firebase/database'
+import { collection, addDoc, getDoc, where, doc, setDoc } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
 import { nanoid } from 'nanoid'
 import ClipIcon from '../assets/ClipIcon'
@@ -13,22 +14,30 @@ import Profile from './Profile'
 import { useStateContext } from '../context/StateContext'
 import { onAuthStateChanged } from 'firebase/auth'
 import GoogleIcon from '../assets/GoogleIcon'
+import useFunction from '../hooks/useFunction'
+import { async } from '@firebase/util'
+import NewUser from './NewUser'
+import CloseIcon from '../assets/CloseIcon'
 
 export default function Main() {
+    const { logIn, currentUser } = useAuth()
+    const { loggedIn, setLoggedIn } = useStateContext()
+    const { handleEncryptFile, handleDecryptFile, handleEncrypt, handleDecrypt, handleEncryptText, handleDecryptText, handleLocalKeys } = useFunction();
+    const sharechatRef = useRef(null)
     const [data, setData] = useState([])
     const [text, setText] = useState("")
-    const { logIn } = useAuth()
     const [file, setFile] = useState(null)
+    const [profileExists, setProfileExists] = useState(false)
     const [profile, setProfile] = useState(false)
-    const { currentUser } = useAuth()
-    const { loggedIn, setLoggedIn } = useStateContext()
-    const sharechatRef = useRef(null)
     const [fileUploadStart, setFileUploadStart] = useState(false)
     const [fileUploadProgress, setFileUploadProgress] = useState(0)
     const [fileDownloadStart, setFileDownloadStart] = useState(false)
     const [fileDownloadProgress, setFileDownloadProgress] = useState(0)
     const [currentDownloadFileName, setCurrentDownloadFileName] = useState("")
     const [displayCopied, setDisplayCopied] = useState(false)
+    const [update, setUpdate] = useState(false)
+    const [loading, setLoading] = useState(true)
+    const [displayChosenFile, setDisplayChosenFile] = useState(false)
     //
     if (currentUser) {
         onAuthStateChanged(auth, (user) => {
@@ -40,13 +49,17 @@ export default function Main() {
         })
     }
     //
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
         console.log(text, file)
         if (file === null && text !== "") {
+            const key = nanoid()
             push(ref(db, `data/${currentUser.uid}/sharechat`,),
                 {
-                    text: text,
+                    text: {
+                        text: await handleEncryptText(text, key),
+                        key: handleEncrypt(key)
+                    }
                 }
 
             ).then((d) => {
@@ -56,57 +69,68 @@ export default function Main() {
                 console.log(e)
             })
         } else if (file !== null) {
-            const storageReff = storageRef(storage, `${currentUser.uid}/${nanoid()}`);
-            const uploadTask = uploadBytesResumable(storageReff, file)
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    setFileUploadStart(true)
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    setFileUploadProgress(progress)
-                    console.log('Upload is ' + progress + '% done');
-                    switch (snapshot.state) {
-                        case 'paused':
-                            console.log('Upload is paused');
-                            break;
-                        case 'running':
-                            console.log('Upload is running');
-                            break;
+            const key = nanoid()
+            handleEncryptFile(file, key).then((encryptedFile) => {
+                console.log(encryptedFile)
+                const storageReff = storageRef(storage, `${currentUser.uid}/${nanoid()}`);
+                const uploadTask = uploadBytesResumable(storageReff, encryptedFile)
+                uploadTask.on('state_changed',
+                    (snapshot) => {
+                        setDisplayChosenFile(false)
+                        setFileUploadStart(true)
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        setFileUploadProgress(progress)
+                        console.log('Upload is ' + progress + '% done');
+                        switch (snapshot.state) {
+                            case 'paused':
+                                console.log('Upload is paused');
+                                break;
+                            case 'running':
+                                console.log('Upload is running');
+                                break;
+                        }
+                    },
+                    (error) => {
+                        switch (error.code) {
+                            case 'storage/unauthorized':
+                                break;
+                            case 'storage/canceled':
+                                break;
+                            case 'storage/unknown':
+                                break;
+                        }
+                    },
+                    () => {
+                        getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
+                            push(ref(db, `data/${currentUser.uid}/sharechat`,),
+                                {
+                                    text: {
+                                        text: text === "" ? "" : await handleEncryptText(text, key),
+                                        key: handleEncrypt(key)
+                                    },
+                                    file: {
+                                        file_name: handleEncrypt(file.name),
+                                        file_key: handleEncrypt(key),
+                                        url: downloadURL
+                                    },
+                                }
+                            ).then((d) => {
+                                console.log(d);
+                                setText("")
+                                setFile(null)
+                                setFileUploadProgress(0)
+                                setFileUploadStart(false)
+                            }).catch((e) => {
+                                console.log(e)
+                                setFileUploadProgress(0)
+                                setFileUploadStart(false)
+                            })
+                        });
                     }
-                },
-                (error) => {
-                    switch (error.code) {
-                        case 'storage/unauthorized':
-                            break;
-                        case 'storage/canceled':
-                            break;
-                        case 'storage/unknown':
-                            break;
-                    }
-                },
-                () => {
-                    getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-                        push(ref(db, `data/${currentUser.uid}/sharechat`,),
-                            {
-                                text: text,
-                                file: {
-                                    file_name: file.name,
-                                    url: downloadURL
-                                },
-                            }
-                        ).then((d) => {
-                            console.log(d);
-                            setText("")
-                            setFile(null)
-                            setFileUploadProgress(0)
-                            setFileUploadStart(false)
-                        }).catch((e) => {
-                            console.log(e)
-                            setFileUploadProgress(0)
-                            setFileUploadStart(false)
-                        })
-                    });
-                }
-            );
+                );
+
+            })
+
 
         } else {
             alert("Please enter text or upload a file")
@@ -118,10 +142,11 @@ export default function Main() {
             alert("File size is too big")
         } else {
             setFile(e.target.files[0])
+            setDisplayChosenFile(true)
         }
     }
     //
-    const handleFileDownload = (name, url) => {
+    const handleFileDownload = (name, url, key) => {
         setFileDownloadStart(true)
         setCurrentDownloadFileName(name)
         console.log(name, url)
@@ -132,12 +157,18 @@ export default function Main() {
         };
         xhr.onload = (event) => {
             const blob = xhr.response;
-            const a = document.createElement('a');
-            a.href = window.URL.createObjectURL(blob);
-            a.download = name;
-            a.click();
-            setFileDownloadProgress(0)
-            setFileDownloadStart(false)
+            name = handleDecrypt(name, localStorage.getItem("privateKey"))
+            const responseFile = new File([blob], name);
+            handleDecryptFile(responseFile, handleDecrypt(key, localStorage.getItem("privateKey"))).then((decryptedFile) => {
+                console.log(decryptedFile, key)
+                const responseBlob = new Blob([decryptedFile]);
+                const a = document.createElement('a');
+                a.href = window.URL.createObjectURL(responseBlob);
+                a.download = name;
+                a.click();
+                setFileDownloadProgress(0)
+                setFileDownloadStart(false)
+            })
         };
         xhr.open('GET', url);
         xhr.send();
@@ -168,21 +199,101 @@ export default function Main() {
         return renderText(text)
     }
     //
+    const handleNew = async (data, keys, chat = []) => {
+        await new Promise((resolve) => {
+            data.forEach(async (d, i) => {
+                console.log(d, keys[i])
+                let object = {
+                    text: d.text.text === "" ? "" : await handleDecryptText(d.text.text, handleDecrypt(d.text.key)),
+                    file: {
+                        file_name: handleDecrypt(d?.file?.file_name),
+                        file_key: handleDecrypt(d?.file?.file_key),
+                        url: d?.file?.url
+                    },
+                    index: keys[i]
+                }
+                if (data.length - 1 === i) {
+                    resolve(console.log("done"))
+                }
+                chat.push(object)
+            })
+        });
+        return chat
+    }
+    //
     useEffect(() => {
         if (currentUser) {
-            const query = ref(db, `data/${currentUser.uid}`);
-            return onValue(query, (snapshot) => {
-                const data = snapshot.val();
+            if (localStorage.getItem("sharechat") === null) {
+                const q = ref(db, `data/${currentUser.uid}/sharechat`);
+                return onValue(q, async (snapshot) => {
+                    if (snapshot.exists) {
+                        let data = await handleNew(Object.values(snapshot.val()), Object.keys(snapshot.val()))
+                        console.log(data)
+                        console.log(JSON.stringify(data), data)
+                        setData(() => data);
+                        localStorage.setItem("sharechat", JSON.stringify(data))
+                    }
+                    // if (snapshot.exists()) {
+                    //     let temp = []
+                    //     if (localStorage.getItem("sharechat") === null) {
+                    //         Object.values(data.sharechat).map(async (d) => {
+                    //             console.log(d)
+                    //             temp.push({
+                    //                 text: d.text.text === "" ? "" : await handleDecryptText(d.text.text, handleDecrypt(d.text.key)),
+                    //                 file: {
+                    //                     file_name: handleDecrypt(d?.file?.file_name),
+                    //                     file_key: handleDecrypt(d?.file?.file_key),
+                    //                     url: d?.file?.url
+                    //                 }
 
-                if (snapshot.exists()) {
-                    let temp = []
-                    Object.values(data.sharechat).map((d) => {
-                        console.log(d)
-                        temp.push(d)
-                    });
-                    setData(() => temp);
-                }
-            });
+                    //             })
+                    //         });
+                    //         console.log(temp)
+                    //         setData(() => temp);
+                    //         localStorage.setItem("sharechat", JSON.stringify(temp))
+                    //     } else {
+                    //         temp = JSON.parse(localStorage.getItem("sharechat"))
+                    //         Object.values(data.sharechat).map(async (d) => {
+                    //             console.log("second", d)
+                    //             temp.push({
+                    //                 text: d.text.text === "" ? "" : await handleDecryptText(d.text.text, handleDecrypt(d.text.key)),
+                    //                 file: {
+                    //                     file_name: handleDecrypt(d?.file?.file_name),
+                    //                     file_key: handleDecrypt(d?.file?.file_key),
+                    //                     url: d?.file?.url
+                    //                 }
+
+                    //             })
+                    //             console.log(temp)
+                    //         });
+                    //         let temp_1 = temp.filter((value, index) => {
+                    //             const _value = JSON.stringify(value);
+                    //             return index === temp.findIndex(obj => {
+                    //                 return JSON.stringify(obj) === _value;
+                    //             });
+                    //         });
+                    //         console.log(temp_1)
+                    //         setData(() => temp_1);
+                    //         localStorage.setItem("sharechat", JSON.stringify(temp_1))
+                    //     }
+                    // }
+                });
+            } else {
+                const ls = JSON.parse(localStorage.getItem("sharechat"))
+                const q = query(ref(db, `data/${currentUser.uid}/sharechat`), limitToLast(1));
+                return onValue(q, async (snapshot) => {
+                    if (snapshot.exists) {
+                        if (Object.keys(snapshot.val())[0] !== ls[ls.length - 1].index) {
+                            console.log(snapshot.val())
+                            const data = await handleNew(Object.values(snapshot.val()), Object.keys(snapshot.val()), ls)
+                            console.log(data)
+                            setData(() => data);
+                            localStorage.setItem("sharechat", JSON.stringify(data))
+                        }
+                    }
+                })
+                console.log(ls[ls.length - 1].index)
+            }
         }
     }, [currentUser]);
     //
@@ -192,10 +303,32 @@ export default function Main() {
         }
     }, [data]);
     //
+    useEffect(() => {
+        if (currentUser) {
+            if (loggedIn) {
+                const docRef = doc(firestore, "users", currentUser.uid);
+                const docSnap = getDoc(docRef)
+                docSnap.then((doc) => {
+                    if (doc.exists()) {
+                        setProfileExists(true)
+                        setLoading(false)
+                    } else {
+                        console.log("No such document!");
+                        setLoading(false)
+                    }
+                }).catch((error) => {
+                    console.log("Error getting document:", error);
+                });
+            }
+        } else {
+            setLoading(false)
+        }
+    }, [loggedIn, update])
+    //
     return (
         <section className="w-96 h-96 bg-[color:var(--bg-primary)] flex flex-col justify-center items-center relative overflow-hidden">
             {
-                currentUser && loggedIn ?
+                currentUser && loggedIn ? loading ? <h1>Loading...</h1> : !profileExists ? <NewUser setUpdate={setUpdate} /> :
                     <>
                         {
                             profile && <Profile currentUser={currentUser} setProfile={setProfile} />
@@ -214,15 +347,21 @@ export default function Main() {
                             {data.map((d) => (
                                 <div key={nanoid()} className="file_text_container w-fit rounded-lg bg-[color:var(--bg-secondary)] mb-2 pb-2 pt-2 overflow-hidden">
                                     {
-                                        d.text !== "" && <p className="mr-2 ml-2 break-all">{handleText(d.text)}</p>
+                                        d.text !== "" &&
+                                        <p className="mr-2 ml-2 break-all text-justify">{d.text.length >= 200 ?
+                                            <>{handleText(d.text.slice(0, 200))}
+                                                <span className="text-blue-300">...more</span>
+                                            </> :
+                                            handleText(d.text.slice(0, 200))}
+                                        </p>
                                     }
                                     {
-                                        d.file &&
+                                        d.file.file_name &&
                                         <div className="flex bg-[color:var(--bg-secondary)] justify-start items-center">
                                             <div className="flex">
                                                 <p className=" mr-2 ml-2 transition-colors text-blue-300">{d.file.file_name}</p>
                                             </div>
-                                            <button className="w-5 h-5 mr-2 ml-2" onClick={() => handleFileDownload(d.file.file_name, d.file.url)}><DownloadIcon /></button>
+                                            <button className="w-5 h-5 mr-2 ml-2" onClick={() => handleFileDownload(d.file.file_name, d.file.url, d.file.file_key)}><DownloadIcon /></button>
                                         </div>
                                     }
                                 </div>
@@ -254,6 +393,17 @@ export default function Main() {
                                     <div className="w-full h-3 bg-[color:var(--bg-primary)]  rounded-full overflow-hidden">
                                         <div className="bg-blue-500 h-full transition-all" style={{ width: `${fileDownloadProgress}%` }}></div>
                                     </div>
+                                </div>
+                            }
+                            {
+                                displayChosenFile &&
+                                <div className="w-1/2 h-20 bg-[color:var(--bg-secondary)] absolute top-0 right-3 -translate-y-20 flex flex-col justify-center p-2 rounded-lg">
+                                    <p className="w-full text-center">Selected File</p>
+                                    <div className="flex justify-center items-center">
+                                        <div className="w-3 h-3"><ClipIcon size={2} /></div>
+                                        <p className="truncate">{file?.name}</p>
+                                    </div>
+                                    <button className="w-4 h-4 absolute top-3 right-3" onClick={() => { setFile(null); setDisplayChosenFile(false) }}><CloseIcon /></button>
                                 </div>
                             }
                             {

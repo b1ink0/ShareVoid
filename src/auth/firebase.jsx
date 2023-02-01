@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getDatabase } from "firebase/database"
 import { getStorage } from "firebase/storage";
+import { getFirestore } from "firebase/firestore";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -17,6 +18,7 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth();
 export const db = getDatabase(app)
 export const storage = getStorage(app);
+export const firestore = getFirestore(app);
 export const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 
@@ -34,10 +36,12 @@ export const handleSignOut = async () => {
     signOut(auth)
         .then(() => {
             console.log('logged out');
+            window.location.reload();
             return true;
         })
         .catch((error) => {
             console.log(error);
+            window.location.reload();
             return false
         });
 }
