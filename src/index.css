@@ -13,9 +13,10 @@
 * {
     font-family: 'Poppins', sans-serif;
 }
-body, html {
-    width: fit-content;
-    height: fit-content;
+body, html, #root {
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-primary);
 }
 
 ::-webkit-scrollbar {

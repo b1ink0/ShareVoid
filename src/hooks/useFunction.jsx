@@ -9,15 +9,27 @@ export default function useFunction() {
         return { publicKey, privateKey }
     }
     //
-    let handleEncrypt = (text) => {
+    const handleEncrypt = (text) => {
         const encrypt = new JSEncrypt();
         encrypt.setPublicKey(handleLocalKeys().publicKey);
         return encrypt.encrypt(text);
     }  
     //
-    let handleDecrypt = (text) => {
+    const handleEncryptWithKey = (text, key) => {
+        const encrypt = new JSEncrypt();
+        encrypt.setPublicKey(key);
+        return encrypt.encrypt(text);
+    }  
+    //
+    const handleDecrypt = (text) => {
         const decrypt = new JSEncrypt();
         decrypt.setPrivateKey(handleLocalKeys().privateKey);
+        return decrypt.decrypt(text);
+    }
+    //
+    const handleDecryptWithKey = (text, key) => {
+        const decrypt = new JSEncrypt();
+        decrypt.setPrivateKey(key);
         return decrypt.decrypt(text);
     }
     //
@@ -193,5 +205,5 @@ export default function useFunction() {
         a.remove();
     }
 
-    return { handleEncryptFile, handleDecryptFile, handleGenerateKey, handleEncrypt, handleDecrypt, handleCopy, handleDownloadJSON, handleEncryptText, handleDecryptText, handleLocalKeys }
+    return { handleEncryptFile, handleDecryptFile, handleGenerateKey, handleEncrypt, handleEncryptWithKey, handleDecrypt, handleDecryptWithKey, handleCopy, handleDownloadJSON, handleEncryptText, handleDecryptText, handleLocalKeys }
 }

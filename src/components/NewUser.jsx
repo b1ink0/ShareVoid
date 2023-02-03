@@ -30,7 +30,7 @@ export default function NewUser({setUpdate}) {
             } else {
                 const docRef = doc(firestore, "users", currentUser.uid);
                 await setDoc(docRef, { username: username, publicKey: key.publicKey})
-                await setDoc(publicUserRef, { publicKey: key.publicKey })
+                await setDoc(publicUserRef, { publicKey: key.publicKey, uid: currentUser.uid })
                 setUpdate((update) => !update)
             }
         }
