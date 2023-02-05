@@ -1,5 +1,6 @@
 import { JSEncryptRSAKey } from 'jsencrypt/lib/JSEncryptRSAKey';
 import { JSEncrypt } from 'jsencrypt/lib/JSEncrypt';
+import { AES, enc } from 'crypto-js';
 
 export default function useFunction() {
     //
@@ -50,24 +51,14 @@ export default function useFunction() {
     }
     //
     const handleEncryptText = async (text, key) => {
-        const blob = new Blob([text]);
-        const encryptedFile = await handleEncryptFile(blob, key)
-        if (encryptedFile) {
-            let encryptedText = await handleReadFile(encryptedFile)
-            encryptedText = new Uint32Array(encryptedText)
-            encryptedText = [...encryptedText]
-            encryptedText = JSON.stringify(encryptedText)
-            return encryptedText
-        }
+        return AES.encrypt(JSON.stringify(text), key).toString();
     }
     //
     const handleDecryptText = async (text, key) => {
-        let encryptedText = JSON.parse(text)
-        encryptedText = new Uint32Array(encryptedText)
-        const blob = new Blob([encryptedText]);
-        const decryptedFile = await handleDecryptFile(blob, key)
-        if (decryptedFile) {
-            return await decryptedFile.text()
+        try {
+            return JSON.parse(AES.decrypt(text, key).toString(enc.Utf8));
+        } catch (error) {
+            return false
         }
     }
     //

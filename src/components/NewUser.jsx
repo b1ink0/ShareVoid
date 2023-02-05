@@ -29,8 +29,8 @@ export default function NewUser({setUpdate}) {
                 console.log("Username already exists")
             } else {
                 const docRef = doc(firestore, "users", currentUser.uid);
-                await setDoc(docRef, { username: username, publicKey: key.publicKey})
-                await setDoc(publicUserRef, { publicKey: key.publicKey, uid: currentUser.uid })
+                await setDoc(docRef, { username: username, publicKey: key.publicKey, uid: currentUser.uid})
+                await setDoc(publicUserRef, { publicKey: key.publicKey, uid: currentUser.uid, username: username })
                 setUpdate((update) => !update)
             }
         }
@@ -74,7 +74,7 @@ export default function NewUser({setUpdate}) {
                 <label htmlFor="username" >Username:</label>
                 <div className="input_container w-full relative flex justify-center items-center">
                     <input value={username} onChange={(e) => setUsername(e.target.value)} type="text" minLength={3} maxLength={15} placeholder="Enter Username..." className="w-full bg-[color:var(--bg-secondary)] h-10 rounded-full outline-none pl-3 pr-3" name="username" id="username" required />
-                    <p className="absolute right-2 ">{username.length}/15</p>
+                    <p className="absolute right-2 text-[color:var(--text-secondary)]">{username.length}/15</p>
                 </div>
                 <button className="w-full mt-2 mb-2 pt-0 pb-1 pr-2 pl-2 rounded-full bg-green-500" type="button" onClick={() => { setKey(handleGenerateKey()); setLoading(true); setKeyDownloaded(false) }}>Generate Key Pair</button>
                 {

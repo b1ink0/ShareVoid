@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useTransition } from 'react'
 import { auth, db, firestore } from '../auth/firebase'
 import { storage } from '../auth/firebase'
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage"
@@ -18,11 +18,13 @@ import useFunction from '../hooks/useFunction'
 import { async } from '@firebase/util'
 import NewUser from './NewUser'
 import CloseIcon from '../assets/CloseIcon'
+import BackIcon from '../assets/BackIcon'
 
-export default function Main({ currentChat }) {
+export default function Main({ currentChat, setCurrentChat }) {
     const { logIn, currentUser } = useAuth()
     const { handleEncryptFile, handleDecryptFile, handleEncrypt, handleEncryptWithKey, handleDecrypt, handleDecryptWithKey, handleEncryptText, handleDecryptText, handleLocalKeys } = useFunction();
     const sharechatRef = useRef(null)
+    const [isPending, startTransition] = useTransition();
     const [data, setData] = useState([])
     const [text, setText] = useState("")
     const [file, setFile] = useState(null)
@@ -35,26 +37,41 @@ export default function Main({ currentChat }) {
     const [loading, setLoading] = useState(true)
     const [displayChosenFile, setDisplayChosenFile] = useState(false)
     //
+    const handleBack = () => {
+        startTransition(() => {
+            setData([])
+            setFile(null)
+            setFileUploadStart(false)
+            setFileUploadProgress(0)
+            setFileDownloadStart(false)
+            setFileDownloadProgress(0)
+            setCurrentDownloadFileName("")
+            setDisplayCopied(false)
+            setLoading(true)
+            setDisplayChosenFile(false)
+            setText("")
+            setCurrentChat({})
+        })
+    }
+    //
     const handleSubmit = async (e) => {
         e.preventDefault()
+        const uid1 = !currentChat.sender ? currentUser.uid : currentChat.uid;
+        const uid2 = currentChat.sender ? currentUser.uid : currentChat.uid;
+        console.log(uid1, uid2)
         console.log(text, file)
         if (file === null && text !== "") {
             const key = nanoid()
             const encryptedText = await handleEncryptText(text, key);
-            let message = {}
-            message[currentUser.uid] = {
+            const message = {
                 text: {
                     text: encryptedText,
-                    key: handleEncrypt(key)
+                    [currentUser.uid]: handleEncrypt(key),
+                    [currentChat.uid]: handleEncryptWithKey(key, currentChat.publicKey)
                 }
             }
-            message[currentChat.uid] = {
-                text: {
-                    text: encryptedText,
-                    key: handleEncryptWithKey(key, currentChat.publicKey)
-                }
-            }
-            push(ref(db, `chats/${currentChat.uid}/${currentUser.uid}`), message).then((d) => {
+            console.log(message)
+            push(ref(db, `chats/${uid1}/${uid2}`), message).then((d) => {
                 console.log(d);
                 setText("")
             }).catch((e) => {
@@ -64,7 +81,7 @@ export default function Main({ currentChat }) {
             const key = nanoid()
             handleEncryptFile(file, key).then((encryptedFile) => {
                 console.log(encryptedFile)
-                const storageReff = storageRef(storage, `${currentChat.uid}/${currentUser.uid}/${nanoid()}`);
+                const storageReff = storageRef(storage, `${uid1}/${uid2}/${nanoid()}`);
                 const uploadTask = uploadBytesResumable(storageReff, encryptedFile)
                 uploadTask.on('state_changed',
                     (snapshot) => {
@@ -95,44 +112,20 @@ export default function Main({ currentChat }) {
                     () => {
                         getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
                             const encryptedText = text !== "" ? await handleEncryptText(text, key) : "";
-                            let message = {}
-                            if (currentUser.uid === currentChat.uid) {
-                                message[currentUser.uid] = {
-                                    text: {
-                                        text: encryptedText,
-                                        key: handleEncrypt(key)
-                                    },
-                                    file: {
-                                        file_name: handleEncrypt(file.name),
-                                        file_key: handleEncrypt(key),
-                                        url: downloadURL
-                                    },
-                                }
-                            } else {
-                                message[currentUser.uid] = {
-                                    text: {
-                                        text: encryptedText,
-                                        key: handleEncrypt(key)
-                                    },
-                                    file: {
-                                        file_name: handleEncrypt(file.name),
-                                        file_key: handleEncrypt(key),
-                                        url: downloadURL
-                                    },
-                                }
-                                message[currentChat.uid] = {
-                                    text: {
-                                        text: encryptedText,
-                                        key: handleEncryptWithKey(key, currentChat.publicKey)
-                                    },
-                                    file: {
-                                        file_name: handleEncryptWithKey(file.name, currentChat.uid),
-                                        file_key: handleEncryptWithKey(key, currentChat.uid),
-                                        url: downloadURL
-                                    },
-                                }
+                            const message = {
+                                text: {
+                                    text: encryptedText,
+                                    [currentUser.uid]: handleEncrypt(key),
+                                    [currentChat.uid]: handleEncryptWithKey(key, currentChat.publicKey)
+                                },
+                                file: {
+                                    file_name: await handleEncryptText(file.name, key),
+                                    [currentUser.uid]: handleEncrypt(key),
+                                    [currentChat.uid]: handleEncryptWithKey(key, currentChat.publicKey),
+                                    url: downloadURL
+                                },
                             }
-                            push(ref(db, `chats/${currentChat.uid}/${currentUser.uid}`,), message).then((d) => {
+                            push(ref(db, `chats/${uid1}/${uid2}`,), message).then((d) => {
                                 console.log(d);
                                 setText("")
                                 setFile(null)
@@ -172,10 +165,9 @@ export default function Main({ currentChat }) {
         };
         xhr.onload = (event) => {
             const blob = xhr.response;
-            name = handleDecrypt(name, localStorage.getItem("privateKey"))
             const responseFile = new File([blob], name);
-            handleDecryptFile(responseFile, handleDecrypt(key, localStorage.getItem("privateKey"))).then((decryptedFile) => {
-                console.log(decryptedFile, key)
+            handleDecryptFile(responseFile, handleDecrypt(key)).then((decryptedFile) => {
+                console.log(decryptedFile, handleDecrypt(key))
                 const responseBlob = new Blob([decryptedFile]);
                 const a = document.createElement('a');
                 a.href = window.URL.createObjectURL(responseBlob);
@@ -216,23 +208,31 @@ export default function Main({ currentChat }) {
     //
     const handleNew = async (data, keys, chat = []) => {
         await new Promise((resolve) => {
+            const uid1 = !currentChat.sender ? currentUser.uid : currentChat.uid;
+            const uid2 = currentChat.sender ? currentUser.uid : currentChat.uid;
+            console.log(uid1, uid2)
+            console.log(data)
             data.forEach(async (d, i) => {
-                d = d[currentUser.uid]
-                console.log(d, keys[i])
-                let object = {
-                    text: d.text.text === "" ? "" : await handleDecryptText(d.text.text, handleDecrypt(d.text.key)),
-                    file: {
-                        file_name: handleDecrypt(d?.file?.file_name),
-                        file_key: handleDecrypt(d?.file?.file_key),
-                        url: d?.file?.url
-                    },
-                    index: keys[i]
-                }
+                const key = handleDecrypt(d.text[currentUser.uid])
+                await handleDecryptText(d.text.text, key).then(async (decryptedText) => {
+                    // if (d.file !== undefined) {
+                    await handleDecryptText(d?.file?.file_name, key).then((decryptedFileName) => {
+                        console.log(decryptedText, decryptedFileName)
+                        let object = {
+                            text: decryptedText,
+                            file: {
+                                file_name: decryptedFileName,
+                                file_key: d?.file?.[currentUser.uid],
+                                url: d?.file?.url
+                            },
+                            index: keys[i]
+                        }
+                        chat.push(object)
+                    })
+                })
                 if (data.length - 1 === i) {
                     resolve(console.log("done"))
                 }
-                console.log(object)
-                chat.push(object)
             })
         });
         return chat
@@ -240,26 +240,25 @@ export default function Main({ currentChat }) {
     //
     useEffect(() => {
         if (currentUser) {
+            const uid1 = !currentChat.sender ? currentUser.uid : currentChat.uid;
+            const uid2 = currentChat.sender ? currentUser.uid : currentChat.uid;
+            console.log(uid1, uid2)
             if (localStorage.getItem(currentChat.uid) === null) {
-                const q = ref(db, `chats/${currentChat.uid}/${currentUser.uid}`);
+                const q = ref(db, `chats/${uid1}/${uid2}`);
                 return onValue(q, async (snapshot) => {
                     if (snapshot.exists()) {
                         let data = await handleNew(Object.values(snapshot.val()), Object.keys(snapshot.val()))
-                        // const values = Object.values(snapshot.val())
-                        
-                        // console.log(Object.keys(values[0])[0] === currentUser.uid ? )
-                        // console.log(JSON.stringify(data), data)
-                        // setData(() => data);
+                        console.log(data)
+                        setData(() => data);
                         // localStorage.setItem(currentChat.uid, JSON.stringify(data))
-                    } else { 
+                    } else {
                         console.log("no data")
                     }
-
                 });
             } else {
                 const ls = JSON.parse(localStorage.getItem(currentChat.uid))
                 setData(ls)
-                const q = query(ref(db, `chats/${currentChat.uid}/${currentUser.uid}`), limitToLast(1));
+                const q = query(ref(db, `chats/${uid1}/${uid1}`), limitToLast(1));
                 return onValue(q, async (snapshot) => {
                     if (snapshot.exists()) {
                         if (Object.keys(snapshot.val())[0] !== ls[ls.length - 1].index) {
@@ -267,7 +266,7 @@ export default function Main({ currentChat }) {
                             const data = await handleNew(Object.values(snapshot.val()), Object.keys(snapshot.val()), ls)
                             console.log(data)
                             setData(() => data);
-                            localStorage.setItem(currentChat.uid, JSON.stringify(data))
+                            // localStorage.setItem(currentChat.uid, JSON.stringify(data))
                         }
                     }
                 })
@@ -283,11 +282,18 @@ export default function Main({ currentChat }) {
     //
     return (
         <>
+            <nav className="w-full h-10 bg-[color:var(--bg-secondary)] flex justify-center items-center relative">
+                <button onClick={handleBack} className="w-10 h-10 absolute left-2"><div className="w-6 h-6"><BackIcon/></div></button>
+                <h1 className="w-full h-full flex justify-center items-center text-center">
+                    {currentChat.username}
+                </h1>
+            </nav>
             <div className="share_chat overflow-auto w-full h-[calc(100%_-_96px)] flex flex-col pt-2 pr-2 pl-2" ref={sharechatRef}>
                 {data.map((d) => (
-                    <div key={nanoid()} className="file_text_container w-fit rounded-lg bg-[color:var(--bg-secondary)] mb-2 pb-2 pt-2 overflow-hidden">
+                    <div key={nanoid()} className={`w-full flex  justify-end`}>
+                    <div className="file_text_container w-fit rounded-lg bg-[color:var(--bg-secondary)] mb-2 pb-2 pt-2 overflow-hidden">
                         {
-                            d.text !== undefined &&
+                            d.text &&
                             <p className="mr-2 ml-2 break-all text-justify">{d.text.length >= 200 ?
                                 <>{handleText(d.text.slice(0, 200))}
                                     <span className="text-blue-300">...more</span>
@@ -304,6 +310,7 @@ export default function Main({ currentChat }) {
                                 <button className="w-5 h-5 mr-2 ml-2" onClick={() => handleFileDownload(d.file.file_name, d.file.url, d.file.file_key)}><DownloadIcon /></button>
                             </div>
                         }
+                    </div>
                     </div>
                 ))
                 }
@@ -352,7 +359,7 @@ export default function Main({ currentChat }) {
                         <p className="w-full text-center">Copied!</p>
                     </div>
                 }
-                <form onSubmit={(e) => handleSubmit(e)} className="w-full flex relative p-2">
+                <form onSubmit={(e) => handleSubmit(e)} className="w-full flex justify-center items-center relative p-2">
                     <div className="w-80 h-10 relative flex justify-center items-center overflow-hidden rounded-full">
                         <input className="w-full bg-[color:var(--bg-secondary)] h-10 rounded-full outline-none pl-3 pr-10" placeholder="Enter..." value={text} onChange={(e) => setText(e.target.value)} type={"text"} />
                         <div className="w-10 h-10 file_button_container absolute right-0">

@@ -5,13 +5,14 @@ import NewUser from './NewUser'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth, db, firestore } from '../auth/firebase'
 import GoogleIcon from '../assets/GoogleIcon'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
 import Profile from './Profile'
 import CloseIcon from '../assets/CloseIcon'
 import { limitToLast, onValue, push, query, ref } from 'firebase/database'
 import { nanoid } from 'nanoid'
 import useFunction from '../hooks/useFunction'
 import Main from './Main'
+import SearchUser from './SearchUser'
 
 export default function Home() {
     const { logIn, currentUser } = useAuth()
@@ -23,6 +24,7 @@ export default function Home() {
     const [profile, setProfile] = useState(false)
     const [chats, setChats] = useState([])
     const [currentChat, setCurrentChat] = useState({})
+    const [searchUser, setSearchUser] = useState(false)
 
     if (currentUser) {
         onAuthStateChanged(auth, (user) => {
@@ -34,7 +36,7 @@ export default function Home() {
         })
     }
     //
-    const handleGetUserInfo = async (chatUIDS, chats = []) => {
+    const handleGetUserInfo = async (chatUIDS, chatUIDS1, chats = []) => {
         await new Promise((resolve) => {
             chatUIDS.forEach(async (uid, i) => {
                 console.log(uid)
@@ -43,11 +45,34 @@ export default function Home() {
                 if (docSnap.exists()) {
                     let chat = {
                         uid: uid,
-                        username: docSnap.data().username,
+                        username: currentUser.uid === uid ? "My Void" : docSnap.data().username,
                         publicKey: docSnap.data().publicKey,
+                        sender: false
                     }
                     if (chatUIDS.length - 1 === i) {
-                        resolve(console.log("done"))
+                        console.log("hmm", chatUIDS1)
+                        if (chatUIDS1.length !== 0) {
+                            chatUIDS1.forEach(async (uid, i) => {
+                                const docRef = doc(firestore, "users", uid);
+                                const docSnap = await getDoc(docRef);
+                                if (docSnap.exists()) {
+                                    let chat = {
+                                        uid: uid,
+                                        username: currentUser.uid === uid ? "My Void" : docSnap.data().username,
+                                        publicKey: docSnap.data().publicKey,
+                                        sender: true
+                                    }
+                                    if (chatUIDS1.length - 1 === i) {
+                                        resolve(console.log("done"))
+                                    }
+                                    chats.push(chat)
+                                } else {
+                                }
+
+                            })
+                        } else {
+                            resolve(console.log("done"))
+                        }
                     }
                     chats.push(chat)
                 } else {
@@ -63,24 +88,36 @@ export default function Home() {
             return onValue(q, async (snapshot) => {
                 if (snapshot.exists()) {
                     const chatsUIDS = Object.keys(snapshot.val())
-                    const chats = await handleGetUserInfo(chatsUIDS);
-                    console.log(chats)
+                    const chatDoc = doc(firestore, "mychats", currentUser.uid);
+                    const chatDocSnap = await getDoc(chatDoc);
+                    let uids = Object.keys(chatDocSnap.data())
+                    uids.splice(uids.indexOf(currentUser.uid),1)
+                    const chats = await handleGetUserInfo(chatsUIDS, uids);
+                    console.log(chats, chatsUIDS, uids)
                     setChats(chats)
-                    localStorage.setItem("chats", JSON.stringify(chats))
+                    // localStorage.setItem("chats", JSON.stringify(chats))
                     setLoading(false)
                 } else {
                     const key = nanoid()
                     const encryptedText = await handleEncryptText("Welcome To ShareVoid!", key);
-                    let message = {}
-                    message[currentUser.uid] = {
+                    const message = {
                         text: {
                             text: encryptedText,
-                            key: handleEncrypt(key)
+                            [currentUser.uid]: handleEncrypt(key),
                         }
                     }
                     const q = ref(db, `chats/${currentUser.uid}/${currentUser.uid}`);
                     push(q, message).then((request) => {
                         setLoading(false)
+                        const mychats = doc(firestore, "mychats", currentUser.uid);
+                        const u = {
+                            [currentUser.uid]: {
+                                uid: currentUser.uid,
+                            }
+                        }
+                        setDoc(mychats, u).then(
+                            console.log("Documemt set")
+                        )
                     })
                 }
             });
@@ -131,21 +168,27 @@ export default function Home() {
     //
     return (
         <section className="w-full h-full bg-[color:var(--bg-primary)] flex flex-col justify-start items-center relative overflow-hidden">
-            <nav className="w-full h-10 bg-[color:var(--bg-secondary)] flex justify-center items-center">
-                <h1 className="w-full h-full flex justify-center items-center text-center">
-                    ShareVoid
-                </h1>
-                {
-                    currentUser && loggedIn &&
-                    <div className="profile_img_container h-10 flex justify-center items-center absolute top-0 right-2">
-                        <button className="h-full w-8" onClick={() => setProfile(true)}>
-                            <img className="rounded-full" src={currentUser.photoURL} />
-                        </button>
-                    </div>
-                }
-            </nav>
+            {
+                Object.keys(currentChat).length === 0 &&
+                <nav className="w-full h-10 bg-[color:var(--bg-secondary)] flex justify-center items-center">
+                    <h1 className="w-full h-full flex justify-center items-center text-center">
+                        ShareVoid
+                    </h1>
+                    {
+                        currentUser && loggedIn &&
+                        <div className="profile_img_container h-10 flex justify-center items-center absolute top-0 right-2">
+                            <button className="h-full w-8" onClick={() => setProfile(true)}>
+                                <img className="rounded-full" src={currentUser.photoURL} />
+                            </button>
+                        </div>
+                    }
+                </nav>
+            }
             {
                 profile && <Profile currentUser={currentUser} setProfile={setProfile} />
+            }
+            {
+                searchUser && <SearchUser />
             }
             {
                 currentUser && loggedIn ?
@@ -158,7 +201,8 @@ export default function Home() {
 
                             Object.keys(currentChat).length === 0 ?
                                 <>
-                                    <button className="w-14 h-14 flex justify-center items-center bg-[color:var(--bg-secondary)] absolute bottom-3 right-3 rounded-full">
+
+                                    <button onClick={() => setSearchUser(true)} className="w-14 h-14 flex justify-center items-center bg-[color:var(--bg-secondary)] absolute bottom-3 right-3 rounded-full">
                                         <div className="w-7 h-7 rotate-45"><CloseIcon /></div>
                                     </button>
                                     <div className="chats_container w-full h-[calc(100%_-_40px)] overflow-auto flex flex-col justify-start items-center">
@@ -168,21 +212,22 @@ export default function Home() {
                                                     <div className="profile_img_container h-14 w-14 flex justify-center items-center bg-gray-900 rounded-full">
                                                     </div>
                                                     <div className="chat_container flex flex-col justify-center items-start ml-3">
-                                                        <h3>{chat.uid === currentUser.uid ? "My Void" : chat.username}</h3>
+                                                        <h3>{chat.username}</h3>
                                                         <p>Message</p>
                                                     </div>
                                                 </div>
                                             ))
                                         }
                                     </div>
-                                </> : <Main  currentChat={currentChat}/>
-                    :
-                    <button onClick={logIn} className="bg-[color:var(--bg-secondary)] pt-1 pb-1 pr-4 pl-4 flex justify-center items-center rounded-full">
-                        <span>Log In Using</span>
-                        <div className="w-4 ml-2">
-                            <GoogleIcon size={4} />
-                        </div>
-                    </button>
+                                </> : <Main currentChat={currentChat} setCurrentChat={setCurrentChat} />
+                    : <div className="absolute w-full h-full flex justify-center items-center">
+                        <button onClick={logIn} className="bg-[color:var(--bg-secondary)] pt-1 pb-1 pr-4 pl-4 flex justify-center items-center rounded-full">
+                            <span>Log In Using</span>
+                            <div className="w-4 ml-2">
+                                <GoogleIcon size={4} />
+                            </div>
+                        </button>
+                    </div>
             }
         </section>
     )
