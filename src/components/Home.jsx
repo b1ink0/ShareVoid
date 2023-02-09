@@ -307,7 +307,7 @@ export default function Home() {
                 currentUser && loggedIn ?
                     loading ?
                         <div className="chats_container w-full h-[calc(100%_-_40px)] pb-3 overflow-auto flex flex-col  justify-start items-center">
-                            <Skeleton style={{ width: `calc(100% - 15px)`, height: "80px", marginTop: "12px", marginTop: "12px" }} count={9} />
+                            <Skeleton style={{ width: `calc(100% - 15px)`, height: "80px", marginTop: "12px" }} count={9} />
                         </div>
                         : !keyExist ?
                             <form className="w-11/12 h-fit p-3 mt-7 border-4 border-[color:var(--bg-secondary)] rounded-lg" onSubmit={(e) => handleSubmitPrivateKey(e)}>
