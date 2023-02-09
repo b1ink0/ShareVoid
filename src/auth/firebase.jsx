@@ -36,6 +36,7 @@ export const handleSignOut = async () => {
     signOut(auth)
         .then(() => {
             console.log('logged out');
+            localStorage.clear()
             window.location.reload();
             return true;
         })

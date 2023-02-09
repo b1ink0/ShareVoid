@@ -68,7 +68,8 @@ export default function Main({ currentChat, setCurrentChat }) {
                     text: encryptedText,
                     [currentUser.uid]: handleEncrypt(key),
                     [currentChat.uid]: handleEncryptWithKey(key, currentChat.publicKey)
-                }
+                },
+                sender: currentUser.uid
             }
             console.log(message)
             push(ref(db, `chats/${uid1}/${uid2}`), message).then((d) => {
@@ -124,6 +125,7 @@ export default function Main({ currentChat, setCurrentChat }) {
                                     [currentChat.uid]: handleEncryptWithKey(key, currentChat.publicKey),
                                     url: downloadURL
                                 },
+                                sender: currentUser.uid
                             }
                             push(ref(db, `chats/${uid1}/${uid2}`,), message).then((d) => {
                                 console.log(d);
@@ -216,6 +218,7 @@ export default function Main({ currentChat, setCurrentChat }) {
                 const key = handleDecrypt(d.text[currentUser.uid])
                 await handleDecryptText(d.text.text, key).then(async (decryptedText) => {
                     // if (d.file !== undefined) {
+                    console.log(d)
                     await handleDecryptText(d?.file?.file_name, key).then((decryptedFileName) => {
                         console.log(decryptedText, decryptedFileName)
                         let object = {
@@ -225,7 +228,8 @@ export default function Main({ currentChat, setCurrentChat }) {
                                 file_key: d?.file?.[currentUser.uid],
                                 url: d?.file?.url
                             },
-                            index: keys[i]
+                            index: keys[i],
+                            sender: d?.sender === currentUser.uid ? true : false,
                         }
                         chat.push(object)
                     })
@@ -240,6 +244,7 @@ export default function Main({ currentChat, setCurrentChat }) {
     //
     useEffect(() => {
         if (currentUser) {
+            console.log(currentChat)
             const uid1 = !currentChat.sender ? currentUser.uid : currentChat.uid;
             const uid2 = currentChat.sender ? currentUser.uid : currentChat.uid;
             console.log(uid1, uid2)
@@ -249,24 +254,32 @@ export default function Main({ currentChat, setCurrentChat }) {
                     if (snapshot.exists()) {
                         let data = await handleNew(Object.values(snapshot.val()), Object.keys(snapshot.val()))
                         console.log(data)
-                        setData(() => data);
-                        // localStorage.setItem(currentChat.uid, JSON.stringify(data))
+                        startTransition(() => {
+                            setData(() => data);
+                        })
+                        localStorage.setItem(currentChat.uid, JSON.stringify(data))
                     } else {
                         console.log("no data")
                     }
                 });
             } else {
-                const ls = JSON.parse(localStorage.getItem(currentChat.uid))
-                setData(ls)
-                const q = query(ref(db, `chats/${uid1}/${uid1}`), limitToLast(1));
+                let ls = JSON.parse(localStorage.getItem(currentChat.uid))
+                startTransition(() => {
+                    setData(ls);
+                })
+                console.log("hehe")
+                const q = query(ref(db, `chats/${uid1}/${uid2}`), limitToLast(1));
                 return onValue(q, async (snapshot) => {
+                    ls = JSON.parse(localStorage.getItem(currentChat.uid))
                     if (snapshot.exists()) {
+                        console.log("hOHO", Object.keys(snapshot.val())[0], ls[ls.length - 1].index)
                         if (Object.keys(snapshot.val())[0] !== ls[ls.length - 1].index) {
                             console.log(snapshot.val())
-                            const data = await handleNew(Object.values(snapshot.val()), Object.keys(snapshot.val()), ls)
-                            console.log(data)
-                            setData(() => data);
-                            // localStorage.setItem(currentChat.uid, JSON.stringify(data))
+                            let data = await handleNew(Object.values(snapshot.val()), Object.keys(snapshot.val()), ls)
+                            startTransition(() => {
+                                setData(data);
+                            })
+                            localStorage.setItem(currentChat.uid, JSON.stringify(data))
                         }
                     }
                 })
@@ -275,42 +288,44 @@ export default function Main({ currentChat, setCurrentChat }) {
     }, [currentUser]);
     //
     useEffect(() => {
-        if (sharechatRef.current !== null) {
-            sharechatRef.current.scrollTop = sharechatRef.current.scrollHeight;
+        if (!isPending) {
+            if (sharechatRef.current !== null) {
+                sharechatRef.current.scrollTop = sharechatRef.current.scrollHeight;
+            }
         }
-    }, [data]);
+    }, [isPending]);
     //
     return (
         <>
             <nav className="w-full h-10 bg-[color:var(--bg-secondary)] flex justify-center items-center relative">
-                <button onClick={handleBack} className="w-10 h-10 absolute left-2"><div className="w-6 h-6"><BackIcon/></div></button>
+                <button onClick={handleBack} className="w-10 h-10 absolute left-2"><div className="w-6 h-6"><BackIcon /></div></button>
                 <h1 className="w-full h-full flex justify-center items-center text-center">
                     {currentChat.username}
                 </h1>
             </nav>
             <div className="share_chat overflow-auto w-full h-[calc(100%_-_96px)] flex flex-col pt-2 pr-2 pl-2" ref={sharechatRef}>
-                {data.map((d) => (
-                    <div key={nanoid()} className={`w-full flex  justify-end`}>
-                    <div className="file_text_container w-fit rounded-lg bg-[color:var(--bg-secondary)] mb-2 pb-2 pt-2 overflow-hidden">
-                        {
-                            d.text &&
-                            <p className="mr-2 ml-2 break-all text-justify">{d.text.length >= 200 ?
-                                <>{handleText(d.text.slice(0, 200))}
-                                    <span className="text-blue-300">...more</span>
-                                </> :
-                                handleText(d.text.slice(0, 200))}
-                            </p>
-                        }
-                        {
-                            d.file.file_name &&
-                            <div className="flex bg-[color:var(--bg-secondary)] justify-start items-center">
-                                <div className="flex">
-                                    <p className=" mr-2 ml-2 transition-colors text-blue-300">{d.file.file_name}</p>
+                {data && data.map((d) => (
+                    <div key={nanoid()} className={`w-full flex  ${d.sender ? "justify-end" : "justify-start"}`}>
+                        <div className="file_text_container w-fit rounded-lg bg-[color:var(--bg-secondary)] mb-2 pb-2 pt-2 overflow-hidden">
+                            {
+                                d.text &&
+                                <p className="mr-2 ml-2 break-all text-justify">{d.text.length >= 200 ?
+                                    <>{handleText(d.text.slice(0, 200))}
+                                        <span className="text-blue-300">...more</span>
+                                    </> :
+                                    handleText(d.text.slice(0, 200))}
+                                </p>
+                            }
+                            {
+                                d.file.file_name &&
+                                <div className="flex bg-[color:var(--bg-secondary)] justify-start items-center">
+                                    <div className="flex">
+                                        <p className=" mr-2 ml-2 transition-colors text-blue-300">{d.file.file_name}</p>
+                                    </div>
+                                    <button className="w-5 h-5 mr-2 ml-2" onClick={() => handleFileDownload(d.file.file_name, d.file.url, d.file.file_key)}><DownloadIcon /></button>
                                 </div>
-                                <button className="w-5 h-5 mr-2 ml-2" onClick={() => handleFileDownload(d.file.file_name, d.file.url, d.file.file_key)}><DownloadIcon /></button>
-                            </div>
-                        }
-                    </div>
+                            }
+                        </div>
                     </div>
                 ))
                 }
@@ -360,7 +375,7 @@ export default function Main({ currentChat, setCurrentChat }) {
                     </div>
                 }
                 <form onSubmit={(e) => handleSubmit(e)} className="w-full flex justify-center items-center relative p-2">
-                    <div className="w-80 h-10 relative flex justify-center items-center overflow-hidden rounded-full">
+                    <div className="w-full h-10 relative flex justify-center items-center overflow-hidden rounded-full">
                         <input className="w-full bg-[color:var(--bg-secondary)] h-10 rounded-full outline-none pl-3 pr-10" placeholder="Enter..." value={text} onChange={(e) => setText(e.target.value)} type={"text"} />
                         <div className="w-10 h-10 file_button_container absolute right-0">
                             <input className="w-10 h-10 absolute opacity-0" type={"file"} onChange={(e) => handleFileChange(e)} />

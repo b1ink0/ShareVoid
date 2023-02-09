@@ -1,6 +1,7 @@
 import { JSEncryptRSAKey } from 'jsencrypt/lib/JSEncryptRSAKey';
 import { JSEncrypt } from 'jsencrypt/lib/JSEncrypt';
 import { AES, enc } from 'crypto-js';
+import { Buffer } from 'buffer';
 
 export default function useFunction() {
     //
@@ -63,112 +64,22 @@ export default function useFunction() {
     }
     //
     const handleEncryptFile = async (file, key) => {
-        var plaintextbytes = await handleReadFile(file)
-            .catch(function (err) {
-                console.error(err);
-            });
-        var plaintextbytes = new Uint8Array(plaintextbytes);
-
-        var pbkdf2iterations = 10000;
-        var passphrasebytes = new TextEncoder("utf-8").encode(key);
-        var pbkdf2salt = window.crypto.getRandomValues(new Uint8Array(8));
-
-        var passphrasekey = await window.crypto.subtle.importKey('raw', passphrasebytes, { name: 'PBKDF2' }, false, ['deriveBits'])
-            .catch(function (err) {
-                console.error(err);
-            });
-        console.log('passphrasekey imported');
-
-        var pbkdf2bytes = await window.crypto.subtle.deriveBits({ "name": 'PBKDF2', "salt": pbkdf2salt, "iterations": pbkdf2iterations, "hash": 'SHA-256' }, passphrasekey, 384)
-            .catch(function (err) {
-                console.error(err);
-            });
-        console.log('pbkdf2bytes derived');
-        pbkdf2bytes = new Uint8Array(pbkdf2bytes);
-
-        let keybytes = pbkdf2bytes.slice(0, 32);
-        let ivbytes = pbkdf2bytes.slice(32);
-
-        var key = await window.crypto.subtle.importKey('raw', keybytes, { name: 'AES-CBC', length: 256 }, false, ['encrypt'])
-            .catch(function (err) {
-                console.error(err);
-            });
-        console.log('key imported');
-
-        var cipherbytes = await window.crypto.subtle.encrypt({ name: "AES-CBC", iv: ivbytes }, key, plaintextbytes)
-            .catch(function (err) {
-                console.error(err);
-            });
-
-        if (!cipherbytes) {
-            spnEncstatus.classList.add("redspan");
-            spnEncstatus.innerHTML = '<p>Error encrypting file.  See console log.</p>';
-            return;
-        }
-
-        console.log('plaintext encrypted');
-        cipherbytes = new Uint8Array(cipherbytes);
-
-        var resultbytes = new Uint8Array(cipherbytes.length + 16)
-        resultbytes.set(new TextEncoder("utf-8").encode('Salted__'));
-        resultbytes.set(pbkdf2salt, 8);
-        resultbytes.set(cipherbytes, 16);
-
-        var blob = new Blob([resultbytes]);
-        let output = new File([blob], file.name + ".enc")
-        return output;
+        console.log(file)
+        let f = await handleReadFile(file);
+        f = new Uint8Array(f);
+        f = Buffer.from(f).toString('base64');
+        f = AES.encrypt(f,key).toString();
+        f = new File([f], file.name + ".enc")
+        return f;
     }
     //
     const handleDecryptFile = async (file, key) => {
-        var cipherbytes = await handleReadFile(file)
-            .catch(function (err) {
-                console.error("filereaderror",err);
-            });
-            console.log(cipherbytes)
-            var cipherbytes = new Uint8Array(cipherbytes);
-            var pbkdf2iterations = 10000;
-            var passphrasebytes = new TextEncoder("utf-8").encode(key);
-        var pbkdf2salt = cipherbytes.slice(8, 16);
-
-        var passphrasekey = await window.crypto.subtle.importKey('raw', passphrasebytes, { name: 'PBKDF2' }, false, ['deriveBits'])
-            .catch(function (err) {
-                console.error(err);
-
-            });
-        console.log('passphrasekey imported');
-
-        var pbkdf2bytes = await window.crypto.subtle.deriveBits({ "name": 'PBKDF2', "salt": pbkdf2salt, "iterations": pbkdf2iterations, "hash": 'SHA-256' }, passphrasekey, 384)
-            .catch(function (err) {
-                console.error(err);
-            });
-        console.log('pbkdf2bytes derived');
-        pbkdf2bytes = new Uint8Array(pbkdf2bytes);
-
-        let keybytes = pbkdf2bytes.slice(0, 32);
-        let ivbytes = pbkdf2bytes.slice(32);
-        cipherbytes = cipherbytes.slice(16);
-
-        var key = await window.crypto.subtle.importKey('raw', keybytes, { name: 'AES-CBC', length: 256 }, false, ['decrypt'])
-            .catch(function (err) {
-                console.error(err);
-            });
-        console.log('key imported');
-
-        var plaintextbytes = await window.crypto.subtle.decrypt({ name: "AES-CBC", iv: ivbytes }, key, cipherbytes)
-            .catch(function (err) {
-                console.error(err);
-            });
-
-        if (!plaintextbytes) {
-            return;
-        }
-
-        console.log('ciphertext decrypted');
-        plaintextbytes = new Uint8Array(plaintextbytes);
-
-        var blob = new Blob([plaintextbytes]);
-        let output = new File([blob], 'file')
-        return output;
+        let f = await file.text()
+        f = AES.decrypt(f, key).toString(enc.Utf8)
+        f = Buffer.from(f, "base64")
+        f = new File([f], "text.png")
+        console.log(f.size)
+        return f;
     }
     //
     const handleCopy = (e, setDisplayCopied) => {
@@ -186,11 +97,11 @@ export default function useFunction() {
     };
     //
     //
-    const handleDownloadJSON = (object, name) => {
-        var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(object));
+    const handleDownloadJSON = (key, name) => {
+        var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(key);
         var a = document.createElement('a');
         a.setAttribute("href", dataStr);
-        a.setAttribute("download", name + ".json");
+        a.setAttribute("download", name + ".txt");
         document.body.appendChild(a); // required for firefox
         a.click();
         a.remove();

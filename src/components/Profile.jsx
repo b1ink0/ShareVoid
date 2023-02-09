@@ -1,12 +1,12 @@
 import React from 'react'
 import CloseIcon from '../assets/CloseIcon'
 import { useAuth } from '../context/AuthContext'
-import "../styles/profile.css"
+import "../styles/profile.scss"
 
 export default function Profile({ currentUser, setProfile }) {
     const { logOut } = useAuth()
     return (
-        <div className="slideIn absolute top-0 right-0 flex flex-col justify-center items-center bg-[color:var(--bg-secondary)] rounded-bl-xl h-fit w-36 z-10 p-2">
+        <div className="slideIn absolute top-0 right-0 flex flex-col justify-center items-center border-4 border-[color:var(--bg-primary)] bg-[color:var(--bg-secondary)] rounded-bl-xl h-fit w-36 z-10 p-2">
             <button className="w-5 h-5 absolute top-2 right-2" onClick={() => setProfile(false)}><CloseIcon size={"full"} /></button>
             <img className="w-10 h-10 rounded-full mb-2" src={currentUser.photoURL} />
             <p className="w-full truncate text-center mb-2">{currentUser.displayName}</p>
