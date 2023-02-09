@@ -344,15 +344,20 @@ export default function Home() {
                                                         <div className="chat_container flex flex-col justify-center items-start ml-3">
                                                             <h3>{chat.username}</h3>
                                                             {chat.latestMessage ?
-                                                                chat.latestMessage.text && chat.latestMessage.file.file_name ?
-                                                                    <div className="w-40 flex flex-col">
-                                                                        <p className="truncate w-full text-third">{chat.latestMessage.text}</p>
-                                                                        <div className="flex justify-center items-center">
-                                                                            <div className="w-3 h-3"><ClipIcon size={2} /></div>
-                                                                            <p className="truncate w-full text-third">{chat.latestMessage?.file?.file_name}fsfsfsfsdfsdfsfsdsdfsfssdfsdffsdffsdfsffsd</p>
-                                                                        </div>
+                                                                !chat.latestMessage.text && chat.latestMessage.file.file_name ?
+                                                                    <div className="w-40 flex justify-center items-center">
+                                                                        <div className="w-3 h-3"><ClipIcon size={2} /></div>
+                                                                        <p className="truncate w-full text-third">{chat.latestMessage?.file?.file_name}fsfsfsfsdfsdfsfsdsdfsfssdfsdffsdffsdfsffsd</p>
                                                                     </div> :
-                                                                    <p className="truncate w-40 text-third">{chat.latestMessage.text}fsdfdsfsdfsdfsdfsdfsdssdsfsdsdfsdffsdd</p> :
+                                                                    chat.latestMessage.text && chat.latestMessage.file.file_name ?
+                                                                        <div className="w-40 flex flex-col">
+                                                                            <p className="truncate w-full text-third">{chat.latestMessage.text}</p>
+                                                                            <div className="flex justify-center items-center">
+                                                                                <div className="w-3 h-3"><ClipIcon size={2} /></div>
+                                                                                <p className="truncate w-full text-third">{chat.latestMessage?.file?.file_name}fsfsfsfsdfsdfsfsdsdfsfssdfsdffsdffsdfsffsd</p>
+                                                                            </div>
+                                                                        </div> :
+                                                                        <p className="truncate w-40 text-third">{chat.latestMessage.text}fsdfdsfsdfsdfsdfsdfsdssdsfsdsdfsdffsdd</p> :
                                                                 <p className="text-third">No Messages Yet!</p>}
                                                         </div>
                                                     </div>

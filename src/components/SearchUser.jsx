@@ -119,7 +119,7 @@ export default function SearchUser({ setSearchUser, setCurrentChat }) {
     setNoResult(false)
     if (username === "") return;
     console.log(username)
-    getUser(username)
+    getUser(username.toLowerCase())
   }, [username])
   //
   useEffect(() => {
