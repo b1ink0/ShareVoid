@@ -295,6 +295,14 @@ export default function Main({ currentChat, setCurrentChat }) {
         }
     }, [isPending]);
     //
+    useEffect(() => {
+        window.addEventListener("resize", (e) => {
+            if (sharechatRef.current !== null) {
+                sharechatRef.current.scrollTop = sharechatRef.current.scrollHeight;
+            } 
+        })
+    })
+    //
     return (
         <>
             <nav className="w-full h-10 bg-[color:var(--bg-secondary)] flex justify-center items-center relative">
@@ -306,7 +314,7 @@ export default function Main({ currentChat, setCurrentChat }) {
             <div className="share_chat overflow-auto w-full h-[calc(100%_-_96px)] flex flex-col pt-2 pr-2 pl-2" ref={sharechatRef}>
                 {data && data.map((d) => (
                     <div key={nanoid()} className={`w-full flex  ${d.sender ? "justify-end" : "justify-start"}`}>
-                        <div className="file_text_container w-fit rounded-lg bg-[color:var(--bg-secondary)] mb-2 pb-2 pt-2 overflow-hidden">
+                        <div className="received file_text_container w-fit rounded-lg bg-[color:var(--bg-secondary)] mb-2 pb-2 pt-2 overflow-hidden">
                             {
                                 d.text &&
                                 <p className="mr-2 ml-2 break-all text-justify">{d.text.length >= 200 ?

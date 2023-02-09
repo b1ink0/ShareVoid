@@ -58,7 +58,7 @@ export default function NewUser({ setUpdate }) {
         } else {
             console.log("Username must be between 3 and 15 characters, must not contain special characters and should not start with a number!")
             startTransition(() => {
-                setWarning("Username must be between 3 and 15 characters, must not contain special characters and should not start with a number!")
+                setWarning("Username must be between 3 and 15 characters in lowercase, must not contain special characters and should not start with a number!")
                 setIsWarning(true);
             })
         }
