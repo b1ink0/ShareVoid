@@ -1,17 +1,5 @@
 var CACHE_NAME = "ShareVoid";
 var urlsToCache = [
-    "/", 
-    "favicon.svg",
-    "logo192.png",
-    "logo512.png",
-    "manifest.json",
-    "index.html",
-    "maskable128.png",
-    "maskable192.png",
-    "maskable384.png",
-    "maskable512.png",
-    "worker.js",
-    
 ];
 
 // Install a service worker
