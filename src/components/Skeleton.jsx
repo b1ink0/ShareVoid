@@ -1,5 +1,5 @@
 import React from 'react'
-import "../styles/skeleton.scss"
+import "../styles/Skeleton.scss"
 
 export default function Skeleton({ style, count = 1 }) {
     const rows = []
