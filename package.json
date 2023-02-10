@@ -16,6 +16,7 @@
     "nanoid": "^4.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-responsive": "^9.0.2",
     "sass": "^1.58.0"
   },
   "devDependencies": {

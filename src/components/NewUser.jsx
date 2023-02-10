@@ -17,6 +17,7 @@ export default function NewUser({ setUpdate }) {
     const [isWarning, setIsWarning] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [rsaKeyLoading, setRsaKeyLoading] = useState(false)
     const [key, setKey] = useState({ publicKey: '', privateKey: '' })
     // const handleKey = () => {
     //     set
@@ -78,12 +79,14 @@ export default function NewUser({ setUpdate }) {
         return result;
     };
     //
-    useEffect(() => {
-        if (key.privateKey && key.publicKey) {
-            console.log(key)
-            setLoading(false)
-        }
-    }, [key])
+    const handleRSAKey = async () => {
+        let key = await
+        handleGenerateKey()
+        console.log(key)
+        setKey(key)
+        setKeyDownloaded(false)
+        setRsaKeyLoading(false)
+    }
     //
     return (
         <>
@@ -99,17 +102,17 @@ export default function NewUser({ setUpdate }) {
                     <p className="">Submitting...</p>
                 </div>
             }
-            <form onSubmit={(e) => handleSubmit(e)} className="flex flex-col w-11/12 p-3 mt-7 border-4 border-[color:var(--bg-secondary)] rounded-lg">
+            <form onSubmit={(e) => handleSubmit(e)} className="flex flex-col w-11/12 md:w-96 p-3 mt-7 border-4 border-[color:var(--bg-secondary)] rounded-lg">
                 <label htmlFor="username" className="font-bold" >Username:</label>
                 <div className="input_container w-full mt-1 relative flex justify-center items-center">
-                    <input value={username} onChange={(e) => { setUsername(e.target.value); setWarning(false) }} type="text" minLength={3} maxLength={15} placeholder="Enter Username..." className="w-full bg-[color:var(--bg-secondary)] h-10 rounded-full outline-none pl-3 pr-3" name="username" id="username" required />
+                    <input value={username} onChange={(e) => { setUsername(e.target.value); setWarning(""); setIsWarning(false) }} type="text" minLength={3} maxLength={15} placeholder="Enter Username..." className="w-full bg-[color:var(--bg-secondary)] h-10 rounded-full outline-none pl-3 pr-3" name="username" id="username" required />
                     <p className="absolute right-2 text-[color:var(--text-secondary)]">{username.length}/15</p>
                 </div>
                 {
                     isWarning &&
                     <p className="w-full bg-[color:var(--bg-secondary)] p-3 rounded-lg text-justify text-red-500 mt-3">{warning}</p>
                 }
-                <button className="w-full mt-3 mb-2 pt-0 pb-1 pr-2 pl-2 rounded-full bg-blue-700" type="button" onClick={() => { setKey(handleGenerateKey()); setLoading(true); setKeyDownloaded(false) }}>Generate RSA Key Pair</button>
+                <button className="w-full mt-3 mb-2 pt-0 pb-1 pr-2 pl-2 rounded-full bg-blue-700" type="button" disabled={rsaKeyLoading ? true : false} onClick={() =>{  setRsaKeyLoading(true); handleRSAKey()}}>{ rsaKeyLoading ? "Generating Key..." : "Generate RSA Key Pair"}</button>
                 {
                     loading ? <p>Loading...</p> :
                         key.publicKey && key.privateKey &&

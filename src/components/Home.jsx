@@ -15,6 +15,8 @@ import Main from './Main'
 import SearchUser from './SearchUser'
 import Skeleton from './Skeleton'
 import ClipIcon from '../assets/ClipIcon'
+import Chats from './Chats'
+import { useMediaQuery } from 'react-responsive'
 
 export default function Home() {
     const { logIn, currentUser } = useAuth()
@@ -31,6 +33,7 @@ export default function Home() {
     const [incorrectPrivateKey, setIncorrectPrivateKey] = useState(false)
     const [privateKey, setPrivateKey] = useState("")
     const [checkPrivateKeyLoading, setCheckPrivateKeyLoading] = useState(false)
+    const isDesktop = useMediaQuery({ minWidth: 768 })
 
     if (currentUser) {
         onAuthStateChanged(auth, (user) => {
@@ -282,7 +285,7 @@ export default function Home() {
     return (
         <section className="w-full h-full bg-[color:var(--bg-primary)] flex flex-col justify-start items-center relative overflow-hidden">
             {
-                Object.keys(currentChat).length === 0 &&
+                (Object.keys(currentChat).length === 0) &&
                 <nav className="w-full h-10 bg-[color:var(--bg-secondary)] flex justify-center items-center">
                     <h1 className="w-full h-full flex justify-center items-center text-center">
                         ShareVoid
@@ -306,8 +309,11 @@ export default function Home() {
             {
                 currentUser && loggedIn ?
                     loading ?
-                        <div className="chats_container w-full h-[calc(100%_-_40px)] pb-3 overflow-auto flex flex-col  justify-start items-center">
-                            <Skeleton style={{ width: `calc(100% - 15px)`, height: "80px", marginTop: "12px" }} count={9} />
+                        <div className="w-full h-[calc(100%_-_40px)] md:h-full  md:flex">
+                            <div className="chats_container w-full md:w-96 h-[calc(100%_-_40px)] md:h-full pb-3 overflow-auto flex flex-col  justify-start items-center">
+                                <Skeleton style={{ width: `calc(100% - 15px)`, height: "80px", marginTop: "12px" }} count={9} />
+                            </div>
+                            <div className="hidden md:flex flex-col justify-center items-center w-full h-full border-l-2 border-l-[color:var(--bg-secondary)] "><p>Select a Chat</p><p>＞﹏＜</p> </div>
                         </div>
                         : !keyExist ?
                             <form className="w-11/12 h-fit p-3 mt-7 border-4 border-[color:var(--bg-secondary)] rounded-lg" onSubmit={(e) => handleSubmitPrivateKey(e)}>
@@ -326,45 +332,17 @@ export default function Home() {
                             </form> :
                             !profileExists ?
                                 <NewUser setUpdate={setUpdate} />
-                                :
-
+                                : 
                                 Object.keys(currentChat).length === 0 ?
-                                    <>
-
-                                        <button onClick={() => setSearchUser(true)} className="w-14 h-14 flex justify-center items-center bg-[color:var(--bg-secondary)] absolute bottom-3 right-3 rounded-full">
-                                            <div className="w-7 h-7 rotate-45"><CloseIcon /></div>
-                                        </button>
-                                        <div className="chats_container w-full h-[calc(100%_-_40px)] overflow-auto flex flex-col justify-start items-center">
-                                            {
-                                                chats && chats.map((chat, i) => (
-                                                    <div onClick={() => setCurrentChat(chat)} key={nanoid()} className="chat_container w-[calc(100%_-_15px)] mt-3 p-2 rounded-lg h-20 bg-[color:var(--bg-secondary)] flex justify-start items-center ">
-                                                        <div className="profile_img_container h-14 w-14 flex justify-center items-center bg-gray-900 rounded-full overflow-hidden">
-                                                            {chat.photoURL ? <img src={chat.photoURL} /> : ":)"}
-                                                        </div>
-                                                        <div className="chat_container flex flex-col justify-center items-start ml-3">
-                                                            <h3>{chat.username}</h3>
-                                                            {chat.latestMessage ?
-                                                                !chat.latestMessage.text && chat.latestMessage.file.file_name ?
-                                                                    <div className="w-40 flex justify-center items-center">
-                                                                        <div className="w-3 h-3"><ClipIcon size={2} /></div>
-                                                                        <p className="truncate w-full text-third">{chat.latestMessage?.file?.file_name}</p>
-                                                                    </div> :
-                                                                    chat.latestMessage.text && chat.latestMessage.file.file_name ?
-                                                                        <div className="w-40 flex flex-col">
-                                                                            <p className="truncate w-full text-third">{chat.latestMessage.text}</p>
-                                                                            <div className="flex justify-center items-center">
-                                                                                <div className="w-3 h-3"><ClipIcon size={2} /></div>
-                                                                                <p className="truncate w-full text-third">{chat.latestMessage?.file?.file_name}</p>
-                                                                            </div>
-                                                                        </div> :
-                                                                        <p className="truncate w-40 text-third">{chat.latestMessage.text}</p> :
-                                                                <p className="text-third">No Messages Yet!</p>}
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            }
-                                        </div>
-                                    </> : <Main currentChat={currentChat} setCurrentChat={setCurrentChat} />
+                                    <Chats chats={chats} currentChat={currentChat} setCurrentChat={setCurrentChat} setSearchUser={setSearchUser} currentUser={currentUser} loggedIn={loggedIn} setProfile={setProfile} isDesktop={isDesktop}/>
+                                    :
+                                    <div className="h-full w-full ">
+                                        {isDesktop ?
+                                            <Chats chats={chats} currentChat={currentChat} setCurrentChat={setCurrentChat} setSearchUser={setSearchUser} currentUser={currentUser} loggedIn={loggedIn} setProfile={setProfile} isDesktop={isDesktop}/>
+                                            :
+                                            <Main currentChat={currentChat} setCurrentChat={setCurrentChat} />
+                                        }
+                                    </div>
                     : <div className="absolute w-full h-full flex justify-center items-center">
                         <button onClick={logIn} className="bg-[color:var(--bg-secondary)] pt-1 pb-1 pr-4 pl-4 flex justify-center items-center rounded-full">
                             <span>Log In Using</span>

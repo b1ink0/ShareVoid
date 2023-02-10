@@ -181,7 +181,7 @@ export default function SearchUser({ setSearchUser, setCurrentChat }) {
         {
           areYouSure &&
           <div className="absolute top-0 left-0 w-full h-full flex justify-center items-center bg-[color:var(--bg-primary-semi-transparent)] ">
-            <div className="w-4/5 h-fit p-3 border-4 border-[color:var(--bg-secondary)] rounded-lg flex flex-col justify-center items-center">
+            <div className="w-full h-fit md:w-72 p-3 border-4 border-[color:var(--bg-secondary)] rounded-lg flex flex-col justify-center items-center">
               <p className="text-center">
                 Start a chat with {selectedUser.username}?
               </p>

@@ -35,12 +35,16 @@ export default function useFunction() {
         return decrypt.decrypt(text);
     }
     //
-    const handleGenerateKey = () => {
-        const key = new JSEncryptRSAKey();
-        key.generate(2048, '10001');
+    const handleGenerateKey = async () => {
+        let key;
+        await new Promise((resolve) => {
+            key = new JSEncryptRSAKey();
+            key.generate(2048, '10001');
+            resolve(console.log("Key generated!"));
+        })
         return { publicKey: key.getPublicKey(), privateKey: key.getPrivateKey() };
     }
-    //
+    //  
     const handleReadFile = (file) => {
         return new Promise((resolve, reject) => {
             var fr = new FileReader();
