@@ -142,7 +142,7 @@ export default function SearchUser({ setSearchUser, setCurrentChat }) {
     , [isPendingSelectedUser])
   //
   return (
-    <div className="absolute w-full h-full flex justify-center items-center bg-[color:var(--bg-primary-semi-transparent)] z-20">
+    <div className="fadeIn absolute w-full h-full flex justify-center items-center bg-[color:var(--bg-primary-semi-transparent)] z-20">
       <div className="w-10/12 h-2/3 p-3 bg-[color:var(--bg-secondary)] rounded-lg relative">
         <button className="w-5 h-5 absolute -top-8 -right-0" onClick={() => setSearchUser(false)} ><CloseIcon size={"full"} /></button>
         <div className="input_container w-full h-10 mb-3 relative flex justify-center items-center overflow-hidden rounded-full">

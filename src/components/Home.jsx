@@ -7,15 +7,13 @@ import { auth, db, firestore } from '../auth/firebase'
 import GoogleIcon from '../assets/GoogleIcon'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import Profile from './Profile'
-import CloseIcon from '../assets/CloseIcon'
-import { limitToFirst, limitToLast, onValue, push, query, ref, get, orderByKey } from 'firebase/database'
+import { limitToFirst, onValue, push, query, ref, get } from 'firebase/database'
 import { nanoid } from 'nanoid'
 import useFunction from '../hooks/useFunction'
 import Main from './Main'
 import SearchUser from './SearchUser'
 import Skeleton from './Skeleton'
-import ClipIcon from '../assets/ClipIcon'
-import Chats from './Chats'
+import Chats from './sub_components/Chats'
 import { useMediaQuery } from 'react-responsive'
 
 export default function Home() {
@@ -152,10 +150,12 @@ export default function Home() {
         setLoading(true)
         const q = ref(db, `chats/${currentUser.uid}`);
         return onValue(q, async (snapshot) => {
+            console.log("WHYYYYY1")
             if (snapshot.exists()) {
                 const chatsUIDS = Object.keys(snapshot.val())
                 const chatDoc = doc(firestore, "mychats", currentUser.uid);
                 getDoc(chatDoc).then(async (chatDocSnap) => {
+                    console.log("WHYYYYY2")
                     let uids = Object.keys(chatDocSnap.data())
                     uids.splice(uids.indexOf(currentUser.uid), 1)
                     uids.sort();
@@ -191,7 +191,7 @@ export default function Home() {
                     )
                 })
             }
-        });
+        }, { onlyOnce: true });
         // } else {
         //     let ls = JSON.parse(localStorage.getItem("chats"))
         //     setChats(ls)
@@ -282,10 +282,20 @@ export default function Home() {
         }
     }, [loggedIn, update])
     //
+    useEffect(() => {
+        try {
+            if(chrome.runtime){
+                window.document.documentElement.style.setProperty("--width", "500px")
+                window.document.documentElement.style.setProperty("--height", "500px")
+            }
+        } catch(e) {
+        }
+    },[])
+    //
     return (
-        <section className="w-full h-full bg-[color:var(--bg-primary)] flex flex-col justify-start items-center relative overflow-hidden">
+        <section className="w-[var(--width)] h-[var(--height)] bg-[color:var(--bg-primary)] flex flex-col justify-start items-center relative overflow-hidden">
             {
-                (Object.keys(currentChat).length === 0) &&
+                (Object.keys(currentChat).length === 0 && !isDesktop) &&
                 <nav className="w-full h-10 bg-[color:var(--bg-secondary)] flex justify-center items-center">
                     <h1 className="w-full h-full flex justify-center items-center text-center">
                         ShareVoid
@@ -310,10 +320,27 @@ export default function Home() {
                 currentUser && loggedIn ?
                     loading ?
                         <div className="w-full h-[calc(100%_-_40px)] md:h-full  md:flex">
-                            <div className="chats_container w-full md:w-96 h-[calc(100%_-_40px)] md:h-full pb-3 overflow-auto flex flex-col  justify-start items-center">
-                                <Skeleton style={{ width: `calc(100% - 15px)`, height: "80px", marginTop: "12px" }} count={9} />
+                            <div className="chats_container w-full md:w-72 h-full md:h-full pb-3 overflow-auto flex flex-col  justify-start items-center relative">
+                                {isDesktop &&
+                                    <nav className="w-full h-10 bg-[color:var(--bg-secondary)] flex justify-center items-center">
+                                        <h1 className="w-full h-full flex justify-center items-center text-center">
+                                            ShareVoid
+                                        </h1>
+                                        {
+                                            currentUser && loggedIn &&
+                                            <div className="profile_img_container h-10 flex justify-center items-center absolute top-0 right-2">
+                                                <button className="h-full w-8" onClick={() => setProfile(true)}>
+                                                    <img className="rounded-full" src={currentUser.photoURL} />
+                                                </button>
+                                            </div>
+                                        }
+                                    </nav>
+                                }
+                                <div className="skeleton_div w-full h-full md:h-[calc(100%_-_40px)] overflow-auto px-2">
+                                    <Skeleton style={{ width: `100%`, height: "80px", marginTop: "12px" }} count={9} />
+                                </div>
                             </div>
-                            <div className="hidden md:flex flex-col justify-center items-center w-full h-full border-l-2 border-l-[color:var(--bg-secondary)] "><p>Select a Chat</p><p>＞﹏＜</p> </div>
+                            <div className="hidden md:flex flex-col justify-center items-center w-[calc(100%_-_288px)] h-full border-l-2 border-l-[color:var(--bg-secondary)] "><p>Select a Chat</p><p>＞﹏＜</p> </div>
                         </div>
                         : !keyExist ?
                             <form className="w-11/12 h-fit p-3 mt-7 border-4 border-[color:var(--bg-secondary)] rounded-lg" onSubmit={(e) => handleSubmitPrivateKey(e)}>
@@ -332,13 +359,13 @@ export default function Home() {
                             </form> :
                             !profileExists ?
                                 <NewUser setUpdate={setUpdate} />
-                                : 
+                                :
                                 Object.keys(currentChat).length === 0 ?
-                                    <Chats chats={chats} currentChat={currentChat} setCurrentChat={setCurrentChat} setSearchUser={setSearchUser} currentUser={currentUser} loggedIn={loggedIn} setProfile={setProfile} isDesktop={isDesktop}/>
+                                    <Chats chats={chats} currentChat={currentChat} setCurrentChat={setCurrentChat} setSearchUser={setSearchUser} currentUser={currentUser} loggedIn={loggedIn} setProfile={setProfile} isDesktop={isDesktop} />
                                     :
                                     <div className="h-full w-full ">
                                         {isDesktop ?
-                                            <Chats chats={chats} currentChat={currentChat} setCurrentChat={setCurrentChat} setSearchUser={setSearchUser} currentUser={currentUser} loggedIn={loggedIn} setProfile={setProfile} isDesktop={isDesktop}/>
+                                            <Chats chats={chats} currentChat={currentChat} setCurrentChat={setCurrentChat} setSearchUser={setSearchUser} currentUser={currentUser} loggedIn={loggedIn} setProfile={setProfile} isDesktop={isDesktop} />
                                             :
                                             <Main currentChat={currentChat} setCurrentChat={setCurrentChat} />
                                         }

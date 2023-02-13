@@ -11,7 +11,8 @@
     --text-third: #a5a5a5;
     --base-color: #1d1d1d;
     --highlight-color: #282828;
-
+    --width: 100%;
+    --height: 100%;
     color: var(--text);
     fill: var(--text);
 }
@@ -30,7 +31,7 @@
 
 * {
     font-family: 'Poppins', sans-serif;
-    scroll-behavior: smooth;
+    // scroll-behavior: smooth;
 }
 body, html, #root {
     width: 100%;
@@ -54,14 +55,19 @@ button {
 }
 
 ::-webkit-scrollbar-thumb {
-    background-color: var(--text);
+    background-color: var(--text-secondary);
     border-radius: 10px;
     -webkit-box-shadow: inset 0 0 0px rgba(0,0,0,0.5); 
 }
 
+.skeleton_div::-webkit-scrollbar {
+    width: 0px;
+    border-radius: none;
+    height: 0px;
+}
 .fadeIn {
     opacity: 0;
-    animation: fadeIn 0.5s ease-in-out forwards;
+    animation: fadeIn 0.3s ease-in-out forwards;
 }
 @keyframes fadeIn {
     0% {

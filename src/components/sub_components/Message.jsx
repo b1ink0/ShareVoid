@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import CopyIcon from '../assets/CopyIcon';
+import CopyIcon from '../../assets/CopyIcon';
 
 export default function Message({ text, setDisplayCopied     }) {
     const [isReadMore, setIsReadMore] = useState(true);
@@ -39,7 +39,7 @@ export default function Message({ text, setDisplayCopied     }) {
         return renderText(text)
     }
     return (
-        <p className="mr-2 ml-2 break-all text-justify">
+        <div className="mr-2 ml-2 break-all text-justify">
             {isReadMore ?
                 <>
                     {
@@ -65,6 +65,6 @@ export default function Message({ text, setDisplayCopied     }) {
                     }
                 </>
             }
-        </p>
+        </div>
     )
 }
