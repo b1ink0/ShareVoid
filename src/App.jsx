@@ -1,20 +1,20 @@
-import { AuthProvider } from './context/AuthContext'
-import { StateProvider } from './context/StateContext'
-import Main from './components/Main'
-import Home from './components/Home'
-import { DBConfig } from './hooks/DBConfig'
-import { initDB } from 'react-indexed-db'
+import { AuthProvider } from "./context/AuthContext";
+import { StateProvider } from "./context/StateContext";
+import Main from "./components/Main";
+import Home from "./components/Home";
+import { DBConfig } from "./hooks/DBConfig";
+import { initDB } from "react-indexed-db";
 
-initDB(DBConfig)
+initDB(DBConfig);
 
 function App() {
   return (
     <AuthProvider>
       <StateProvider>
-        <Home/>
+        <Home />
       </StateProvider>
     </AuthProvider>
-  )
+  );
 }
 
-export default App
+export default App;

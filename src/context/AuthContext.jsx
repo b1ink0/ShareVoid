@@ -18,9 +18,9 @@ export function AuthProvider({ children }) {
     return googleHandler();
   };
   const logOut = () => {
-    handleSignOut().then(d => {
-      console.log(d)
-    })
+    handleSignOut().then((d) => {
+      console.log(d);
+    });
   };
 
   useEffect(() => {
