@@ -25,7 +25,7 @@ import { useMediaQuery } from "react-responsive";
 
 export default function Home() {
   const { logIn, currentUser } = useAuth();
-  const { loggedIn, setLoggedIn } = useStateContext();
+  const { loggedIn, setLoggedIn, username, setUsername } = useStateContext();
   const { handleEncryptText, handleEncrypt, handleDecryptWithKey } =
     useFunction();
   const [loading, setLoading] = useState(true);
@@ -170,26 +170,29 @@ export default function Home() {
   };
   //
   const handleChats = () => {
-    // if (localStorage.getItem("chats") === null) {
-    setLoading(true);
+    if (localStorage.getItem("chats") === null) {
+      setLoading(true);
+    } else {
+      setChats(JSON.parse(localStorage.getItem("chats")));
+      setLoading(false);
+    }
+
     const q = ref(db, `chats/${currentUser.uid}`);
     return onValue(
       q,
       async (snapshot) => {
-        console.log("WHYYYYY1");
         if (snapshot.exists()) {
           const chatsUIDS = Object.keys(snapshot.val());
           const chatDoc = doc(firestore, "mychats", currentUser.uid);
           getDoc(chatDoc)
             .then(async (chatDocSnap) => {
-              console.log("WHYYYYY2");
               let uids = Object.keys(chatDocSnap.data());
               uids.splice(uids.indexOf(currentUser.uid), 1);
               uids.sort();
               const chats = await handleGetUserInfo(chatsUIDS, uids);
               handleLatestMessage(chats);
               // setChats(chats)
-              localStorage.setItem("chats", JSON.stringify(chats));
+            //   localStorage.setItem("chats", JSON.stringify(chats));
               setLoading(false);
             })
             .catch((error) => {
@@ -280,7 +283,7 @@ export default function Home() {
         latestMessage: messages ? messages[messages.length - 1] : false,
       });
     });
-    console.log(updatedChats);
+    localStorage.setItem("chats", JSON.stringify(updatedChats));
     setChats(updatedChats);
   };
   //
@@ -303,6 +306,8 @@ export default function Home() {
               } else {
                 setProfileExists(true);
                 handleChats();
+                setUsername(doc.data()?.username);
+                localStorage.setItem("username", doc.data().username);
               }
             } else {
               console.log("No such document!");
@@ -348,6 +353,7 @@ export default function Home() {
         <SearchUser
           setSearchUser={setSearchUser}
           setCurrentChat={setCurrentChat}
+          myUsername={username}
         />
       )}
       {currentUser && loggedIn ? (

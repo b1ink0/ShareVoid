@@ -64,6 +64,7 @@ export default function Input({
           [currentChat.uid]: handleEncryptWithKey(key, currentChat.publicKey),
         },
         sender: currentUser.uid,
+        timestamp: Date.now(),
       };
       console.log(message);
       push(ref(db, `chats/${uid1}/${uid2}`), message)
@@ -134,6 +135,7 @@ export default function Input({
                       img: displayChosenImg,
                     },
                     sender: currentUser.uid,
+                    timestamp: Date.now(),
                   };
                   push(ref(db, `chats/${uid1}/${uid2}`), message)
                     .then((d) => {
@@ -163,7 +165,12 @@ export default function Input({
           setEncrypting(false);
         });
     } else {
-      alert("Please enter text or upload a file");
+      setAlertMessage("Please enter some text or choose a file!");
+      setAlert(true);
+      const timer = setTimeout(() => {
+        setAlert(false);
+        clearTimeout(timer);
+      }, 1000);
     }
   };
   //

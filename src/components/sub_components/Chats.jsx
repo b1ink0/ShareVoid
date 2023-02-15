@@ -56,7 +56,7 @@ export default function Chats({
             chats.map((chat, i) => (
               <div
                 onClick={() => setCurrentChat(chat)}
-                key={nanoid()}
+                key={chat.uid}
                 className="chat_container w-full mt-3 p-2 rounded-lg h-20  bg-[color:var(--bg-secondary)] flex justify-start items-center "
               >
                 <div className="profile_img_container h-14  w-14  flex justify-center items-center bg-gray-900 rounded-full overflow-hidden">
@@ -106,7 +106,7 @@ export default function Chats({
       {Object.keys(currentChat).length === 0 && (
         <div className="hidden md:flex flex-col justify-center items-center w-[calc(100%_-_288px)] h-full border-l-2 border-l-[color:var(--bg-secondary)] ">
           <p>Select a Chat</p>
-          <p>＞﹏＜</p>{" "}
+          <p>＞﹏＜</p>
         </div>
       )}
       {currentChat && Object.keys(currentChat).length !== 0 && isDesktop && (

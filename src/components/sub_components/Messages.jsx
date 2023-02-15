@@ -17,24 +17,7 @@ export default function Messages({
   setImageViewerSrc
 }) {
   const { handleDecryptFile, handleDecrypt } = useFunction();
-  const [currentData, setCurrentData] = useState([]);
-  const [isPending, startTransition] = useTransition();
-  const objectsEqual = (o1, o2) =>
-    Object.keys(o1).length === Object.keys(o2).length &&
-    Object.keys(o1).every((p) => o1[p] === o2[p]);
 
-  console.log(objectsEqual(data, currentData));
-  //
-  useEffect(() => {
-    if (data && data.length > 0) {
-      if (!objectsEqual(data, currentData)) {
-        console.log("data changed");
-        startTransition(() => {
-          setCurrentData(data);
-        });
-      }
-    }
-  }, [data]);
   //f
   const handleFileDownload = (name, url, key) => {
     setAlert(true);
@@ -72,19 +55,26 @@ export default function Messages({
   };
   return (
     <>
-      {currentData &&
-        currentData.map((d, i) => (
+      {data &&
+        data.map((d, i) => (
           <div
-            key={nanoid()}
-            className={`w-full flex  ${
-              d.sender ? "justify-end" : "justify-start"
+            key={d.index}
+            className={` w-full flex  ${
+              d.sender ? " justify-end" : " justify-start"
             }`}
           >
             <div
-              className={` file_text_container w-fit rounded-lg ${
-                !d.sender ? "bg-[color:var(--bg-secondary)]" : "bg-gray-700"
+              className={`relative file_text_container w-fit rounded-lg  ${
+                !d.sender ? "slideInSent bg-[color:var(--bg-secondary)] rounded-bl-none" : " slideInRecived rounded-br-none bg-gray-700"
               } mb-2 pb-2 pt-2 overflow-hidden`}
             >
+                {/* {
+                d?.time_stamp && (
+                    <p className="absolute bottom-0 right-1 text-xs text-gray-400">
+                        { new Date(d.time_stamp).getHours() + ":" + new Date(d.time_stamp).getMinutes()}
+                    </p>
+                )
+            } */}
               {(d.text && !d.file?.img) && (
                 <Message setDisplayCopied={setDisplayCopied} text={d.text} />
               )}
@@ -118,6 +108,7 @@ export default function Messages({
                 file={d.file}
                 sender={d.sender}
                 index={d.index}
+                imgSrc={d?.img_src}
                 sharechatRef={sharechatRef}
                 setDisplayCopied={setDisplayCopied}
                 setImageViewerSrc={setImageViewerSrc}

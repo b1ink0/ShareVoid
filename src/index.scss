@@ -31,7 +31,7 @@
 
 * {
   font-family: "Poppins", sans-serif;
-  // scroll-behavior: smooth;
+  scroll-behavior: smooth;
 }
 body,
 html,
@@ -70,12 +70,36 @@ button {
 .fadeIn {
   opacity: 0;
   animation: fadeIn 0.3s ease-in-out forwards;
-}
-@keyframes fadeIn {
-  0% {
-    opacity: 0;
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
   }
-  100% {
-    opacity: 1;
+}
+.slideInSent {
+  transform: translateX(-100%);
+  animation: slideInSent 0.3s ease-in-out forwards;
+  @keyframes slideInSent {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(0);
+    }
+  }
+}
+.slideInRecived {
+  transform: translateX(100%);
+  animation: slideInRecived 0.3s ease-in-out forwards;
+  @keyframes slideInRecived {
+    0% {
+      transform: translateX(100%) scale(0) ;
+    }
+    100% {
+      transform: translateX(0) scale(1);
+    }
   }
 }

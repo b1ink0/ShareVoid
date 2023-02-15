@@ -11,10 +11,13 @@ export function useStateContext() {
 // Creating Provider
 export function StateProvider({ children }) {
   const [loggedIn, setLoggedIn] = useState(false);
+  const [username, setUsername] = useState("")
 
   const values = {
     loggedIn,
     setLoggedIn,
+    username,
+    setUsername
   };
   return (
     <StateContext.Provider value={values}>{children}</StateContext.Provider>

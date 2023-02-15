@@ -21,7 +21,11 @@ import useFunction from "../hooks/useFunction";
 import Skeleton from "./Skeleton";
 import TickIcon from "../assets/TickIcon";
 
-export default function SearchUser({ setSearchUser, setCurrentChat }) {
+export default function SearchUser({
+  setSearchUser,
+  setCurrentChat,
+  myUsername
+}) {
   const { handleEncrypt, handleEncryptWithKey, handleEncryptText } =
     useFunction();
   const [isPending, startTransition] = useTransition();
@@ -34,9 +38,11 @@ export default function SearchUser({ setSearchUser, setCurrentChat }) {
   const [areYouSure, setAreYouSure] = useState(false);
   const [selectedUser, setSelectedUser] = useState({});
   const [alert, setAlert] = useState(false);
+  const [sending, setSending] = useState(false)
   //
   const handleNewChat = async () => {
     console.log(selectedUser);
+    setSending(true)
     const q = ref(db, `chats/${currentUser.uid}/${selectedUser.uid}`);
     get(q).then((snapshot) => {
       if (snapshot.exists()) console.log("exists 1");
@@ -47,7 +53,7 @@ export default function SearchUser({ setSearchUser, setCurrentChat }) {
           else {
             const key = nanoid();
             const encryptedText = await handleEncryptText(
-              selectedUser.username + " has started a chat with you!",
+              myUsername + " has started a chat with you!",
               key
             );
             const message = {
@@ -65,29 +71,39 @@ export default function SearchUser({ setSearchUser, setCurrentChat }) {
             push(q, message).then((request) => {
               console.log("sent");
               const mychats = doc(firestore, "mychats", currentUser.uid);
-              const chat = {
+              const receiverschats = doc(firestore, "mychats", selectedUser.uid);
+              const mychat = {
                 [selectedUser.uid]: {
                   uid: selectedUser.uid,
                 },
               };
-              updateDoc(mychats, chat)
-                .then(() => {
-                  console.log("updated");
-                  startTransition(() => {
-                    setAreYouSure(false);
-                    setUsername("");
-                    setCurrentChat({
-                      uid: selectedUser.uid,
-                      username: selectedUser.username,
-                      publicKey: selectedUser.publicKey,
-                      sender: true,
+              const receiverchat = {
+                [currentUser.uid]: {
+                  uid: currentUser.uid,
+                },
+              };
+              updateDoc(receiverschats, receiverchat).then(() => {
+                updateDoc(mychats, mychat)
+                  .then(() => {
+                    console.log("updated");
+                    startTransition(() => {
+                      setSending(false)
+                      setAreYouSure(false);
+                      setUsername("");
+                      setCurrentChat({
+                        uid: selectedUser.uid,
+                        username: selectedUser.username,
+                        publicKey: selectedUser.publicKey,
+                        sender: true,
+                      });
+                      setSearchUser(false);
                     });
-                    setSearchUser(false);
+                  })
+                  .catch((error) => {
+                    sending(false)
+                    console.log(error);
                   });
-                })
-                .catch((error) => {
-                  console.log(error);
-                });
+              })
             });
           }
         });
@@ -210,10 +226,12 @@ export default function SearchUser({ setSearchUser, setCurrentChat }) {
             results[0] &&
             results.map((result, i) => (
               <div
-                key={i}
+                key={result.uid}
                 className="fadeIn search_result w-full h-12 flex justify-start pr-2 pl-2 items-center bg-[color:var(--bg-secondary)] rounded-lg mb-3 relative"
               >
-                <div className="profile_img_container h-9 w-9 mr-3 flex justify-center items-center bg-gray-900 rounded-full"></div>
+                <div className="profile_img_container h-9  w-9 mr-3  flex justify-center items-center bg-gray-900 rounded-full overflow-hidden">
+                  {result.photoURL ? <img src={result.photoURL} /> : ":)"}
+                </div>
                 <h3>{result.username}</h3>
                 {result.uid !== currentUser.uid && !result.isLocal ? (
                   <button
@@ -242,7 +260,7 @@ export default function SearchUser({ setSearchUser, setCurrentChat }) {
           )}
         </div>
         {areYouSure && (
-          <div className="absolute top-0 left-0 w-full h-full flex justify-center items-center bg-[color:var(--bg-primary-semi-transparent)] ">
+          <div className="fadeIn absolute top-0 left-0 w-full h-full flex justify-center items-center bg-[color:var(--bg-primary-semi-transparent)] ">
             <div className="w-full h-fit md:w-72 p-3 border-4 border-[color:var(--bg-secondary)] rounded-lg flex flex-col justify-center items-center">
               <p className="text-center">
                 Start a chat with {selectedUser.username}?
@@ -261,7 +279,7 @@ export default function SearchUser({ setSearchUser, setCurrentChat }) {
                   onClick={() => handleNewChat()}
                   className="w-28 h-9 bg-[color:var(--bg-secondary)] text-[color:var(--text-primary)] rounded-lg"
                 >
-                  Start Chat
+                  { sending ? "Starting..." : "Start Chat" }
                 </button>
               </div>
             </div>

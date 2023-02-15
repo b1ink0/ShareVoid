@@ -19,17 +19,18 @@ import Skeleton from "./Skeleton";
 import Message from "./sub_components/Message";
 import CameraIcon from "../assets/CameraIcon";
 import Compress from "compress.js";
-import Image from "./sub_components/Image";
 import Messages from "./sub_components/Messages";
 import Input from "./sub_components/Input";
 import ImageViewer from "./sub_components/ImageViewer";
+import { useIndexedDB } from "react-indexed-db";
+import { async } from "@firebase/util";
 
 export default function Main({ currentChat, setCurrentChat }) {
   const { currentUser } = useAuth();
   const sharechatRef = useRef(null);
   const inputRef = useRef(null);
   const [isPending, startTransition] = useTransition();
-  const { handleDecrypt, handleDecryptText } = useFunction();
+  const { handleDecrypt, handleDecryptText, handleDecryptFile } = useFunction();
   const [data, setData] = useState([]);
   const [text, setText] = useState("");
   const [file, setFile] = useState(null);
@@ -40,12 +41,14 @@ export default function Main({ currentChat, setCurrentChat }) {
   const [currentDownloadFileName, setCurrentDownloadFileName] = useState("");
   const [displayCopied, setDisplayCopied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const [alert, setAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("Sending...");
   const [displayChosenFile, setDisplayChosenFile] = useState(false);
   const [displayChosenImg, setDisplayChosenImg] = useState(false);
   const [chosenImg, setChosenImg] = useState({});
-  const [imageViewerSrc, setImageViewerSrc] = useState("")
+  const [imageViewerSrc, setImageViewerSrc] = useState("");
+
   //
   const handleBack = () => {
     startTransition(() => {
@@ -91,6 +94,7 @@ export default function Main({ currentChat, setCurrentChat }) {
                   },
                   index: keys[i],
                   sender: d?.sender === currentUser.uid ? true : false,
+                  time_stamp: d?.timestamp,
                 };
                 chat.push(object);
               }
@@ -117,7 +121,6 @@ export default function Main({ currentChat, setCurrentChat }) {
               Object.values(snapshot.val()),
               Object.keys(snapshot.val())
             );
-            console.log(data);
             startTransition(() => {
               setData(() => data);
             });
@@ -139,13 +142,15 @@ export default function Main({ currentChat, setCurrentChat }) {
               console.log(snapshot.val());
               let data = await handleNew(
                 Object.values(snapshot.val()),
-                Object.keys(snapshot.val()),
-                ls
+                Object.keys(snapshot.val())
               );
               startTransition(() => {
-                setData(data);
+                setData((prev) => [...prev, ...data]);
               });
-              localStorage.setItem(currentChat.uid, JSON.stringify(data));
+              localStorage.setItem(
+                currentChat.uid,
+                JSON.stringify([...ls, ...data])
+              );
             }
           }
         });
@@ -158,20 +163,33 @@ export default function Main({ currentChat, setCurrentChat }) {
       if (sharechatRef.current !== null) {
         sharechatRef.current.scrollTop = sharechatRef.current.scrollHeight;
       }
+      if (loadingMessages) {
+        // setLoadingMessages(false);
+        console.log("done loading messages");
+      }
     }
   }, [isPending]);
   //
   useEffect(() => {
+    setLoadingMessages(true);
+    console.log("loading messages");
     window.addEventListener("resize", (e) => {
       if (sharechatRef.current !== null) {
         sharechatRef.current.scrollTop = sharechatRef.current.scrollHeight;
       }
     });
+    if (sharechatRef.current !== null) {
+      setTimeout(() => {
+        setLoadingMessages(false);
+      }, 1000);
+      sharechatRef.current.addEventListener("scroll", () => {
+        if (Math.round(sharechatRef.current.offsetHeight + sharechatRef.current.scrollTop) === sharechatRef.current.scrollHeight) {
+          setLoadingMessages(false);
+        }
+      });
+    }
   }, []);
   //
-  const renderI = (item, index) => {
-    return <p>{item?.text}</p>;
-  };
   return (
     <>
       <nav className="w-full h-10 bg-[color:var(--bg-secondary)] flex justify-center items-center relative">
@@ -194,153 +212,158 @@ export default function Main({ currentChat, setCurrentChat }) {
           </div>
         )}
       </nav>
-      <div
-        className="share_chat overflow-auto w-full h-[calc(100%_-_96px)] pt-2 pr-2 pl-2"
-        ref={sharechatRef}
-      >
-        <Messages
-          data={data}
-          setDisplayCopied={setDisplayCopied}
-          sharechatRef={sharechatRef}
-          setAlert={setAlert}
-          setAlertMessage={setAlertMessage}
-          setCurrentDownloadFileName={setCurrentDownloadFileName}
-          setFileDownloadProgress={setFileDownloadProgress}
-          setFileDownloadStart={setFileDownloadStart}
+      <div className="w-full h-[calc(100%_-_96px)] relative">
+        <div
+            className="share_chat overflow-y overflow-x-hidden w-full h-full pt-2 pr-2 pl-2"
+            ref={sharechatRef}
+        >
+            <Messages
+                data={data}
+                setDisplayCopied={setDisplayCopied}
+                sharechatRef={sharechatRef}
+                setAlert={setAlert}
+                setAlertMessage={setAlertMessage}
+                setCurrentDownloadFileName={setCurrentDownloadFileName}
+                setFileDownloadProgress={setFileDownloadProgress}
+                setFileDownloadStart={setFileDownloadStart}
+                setImageViewerSrc={setImageViewerSrc}
+            />
+        </div>
+            {(data[0] === undefined || loadingMessages) && (
+                <div className="absolute bg-[color:var(--bg-primary)] overflow-auto w-full h-full top-0 pt-2 pr-2 pl-2 ">
+            <Skeleton
+                wrapper={true}
+                wrapperStyle={{
+                width: "100%",
+                height: "40px",
+                marginBottom: "8px",
+                position: "relative",
+                }}
+                styleArray={[
+                {
+                    width: "30%",
+                    height: "40px",
+                    marginTop: "8px",
+                    position: "absolute",
+                    right: "0px",
+                },
+                {
+                    width: "50%",
+                    height: "40px",
+                    marginTop: "8px",
+                    position: "absolute",
+                    right: "0px",
+                },
+                {
+                    width: "90%",
+                    height: "40px",
+                    marginTop: "8px",
+                    position: "absolute",
+                    right: "0px",
+                },
+                {
+                    width: "30%",
+                    height: "40px",
+                    marginTop: "8px",
+                    position: "absolute",
+                    left: "0px",
+                },
+                {
+                    width: "70%",
+                    height: "40px",
+                    marginTop: "8px",
+                    position: "absolute",
+                    left: "0px",
+                },
+                {
+                    width: "50%",
+                    height: "40px",
+                    marginTop: "8px",
+                    position: "absolute",
+                    left: "0px",
+                },
+                {
+                    width: "60%",
+                    height: "40px",
+                    marginTop: "8px",
+                    position: "absolute",
+                    right: "0px",
+                },
+                {
+                    width: "50%",
+                    height: "40px",
+                    marginTop: "8px",
+                    position: "absolute",
+                    right: "0px",
+                },
+                {
+                    width: "90%",
+                    height: "40px",
+                    marginTop: "8px",
+                    position: "absolute",
+                    right: "0px",
+                },
+                {
+                    width: "30%",
+                    height: "40px",
+                    marginTop: "8px",
+                    position: "absolute",
+                    left: "0px",
+                },
+                {
+                    width: "50%",
+                    height: "40px",
+                    marginTop: "8px",
+                    position: "absolute",
+                    left: "0px",
+                },
+                {
+                    width: "90%",
+                    height: "40px",
+                    marginTop: "8px",
+                    position: "absolute",
+                    left: "0px",
+                },
+                {
+                    width: "40%",
+                    height: "40px",
+                    marginTop: "8px",
+                    position: "absolute",
+                    left: "0px",
+                },
+                ]}
+                count={13}
+            />
+            </div>
+            )}
+      </div>
+      {displayChosenImg && chosenImg?.name && (
+        <div className="w-2/3 max-h-96 bg-[color:var(--bg-secondary)] absolute bottom-14 left-3  flex flex-col justify-center p-2 rounded-lg">
+          <div className="w-full h-full overflow-auto mb-7">
+            <img
+              className="object-contain w-full h-full"
+              src={chosenImg?.src}
+            />
+          </div>
+          <p className="w-full truncate absolute bottom-2">{chosenImg?.name}</p>
+          <button
+            className="w-4 h-4 absolute -top-5 right-0"
+            onClick={() => {
+              setFile(null);
+              setChosenImg({});
+              setDisplayChosenImg(false);
+            }}
+          >
+            <CloseIcon />
+          </button>
+        </div>
+      )}
+      {imageViewerSrc !== "" && (
+        <ImageViewer
+          imgSrc={imageViewerSrc}
           setImageViewerSrc={setImageViewerSrc}
         />
-        {data[0] === undefined && (
-          <Skeleton
-            wrapper={true}
-            wrapperStyle={{
-              width: "100%",
-              height: "40px",
-              marginBottom: "8px",
-              position: "relative",
-            }}
-            styleArray={[
-              {
-                width: "30%",
-                height: "40px",
-                marginTop: "8px",
-                position: "absolute",
-                right: "0px",
-              },
-              {
-                width: "50%",
-                height: "40px",
-                marginTop: "8px",
-                position: "absolute",
-                right: "0px",
-              },
-              {
-                width: "90%",
-                height: "40px",
-                marginTop: "8px",
-                position: "absolute",
-                right: "0px",
-              },
-              {
-                width: "30%",
-                height: "40px",
-                marginTop: "8px",
-                position: "absolute",
-                left: "0px",
-              },
-              {
-                width: "70%",
-                height: "40px",
-                marginTop: "8px",
-                position: "absolute",
-                left: "0px",
-              },
-              {
-                width: "50%",
-                height: "40px",
-                marginTop: "8px",
-                position: "absolute",
-                left: "0px",
-              },
-              {
-                width: "60%",
-                height: "40px",
-                marginTop: "8px",
-                position: "absolute",
-                right: "0px",
-              },
-              {
-                width: "50%",
-                height: "40px",
-                marginTop: "8px",
-                position: "absolute",
-                right: "0px",
-              },
-              {
-                width: "90%",
-                height: "40px",
-                marginTop: "8px",
-                position: "absolute",
-                right: "0px",
-              },
-              {
-                width: "30%",
-                height: "40px",
-                marginTop: "8px",
-                position: "absolute",
-                left: "0px",
-              },
-              {
-                width: "50%",
-                height: "40px",
-                marginTop: "8px",
-                position: "absolute",
-                left: "0px",
-              },
-              {
-                width: "90%",
-                height: "40px",
-                marginTop: "8px",
-                position: "absolute",
-                left: "0px",
-              },
-              {
-                width: "40%",
-                height: "40px",
-                marginTop: "8px",
-                position: "absolute",
-                left: "0px",
-              },
-            ]}
-            count={13}
-          />
-        )}
-      </div>
-        {displayChosenImg && chosenImg?.name && (
-          <div className="w-2/3 max-h-96 bg-[color:var(--bg-secondary)] absolute bottom-14 left-3  flex flex-col justify-center p-2 rounded-lg">
-            <div className="w-full h-full overflow-auto mb-7">
-              <img
-                className="object-contain w-full h-full"
-                src={chosenImg?.src}
-              />
-            </div>
-            <p className="w-full truncate absolute bottom-2">
-              {chosenImg?.name}
-            </p>
-            <button
-              className="w-4 h-4 absolute -top-5 right-0"
-              onClick={() => {
-                setFile(null);
-                setChosenImg({});
-                setDisplayChosenImg(false);
-              }}
-            >
-              <CloseIcon />
-            </button>
-          </div>
-        )}
-        {
-            imageViewerSrc !=="" && <ImageViewer imgSrc={imageViewerSrc} setImageViewerSrc={setImageViewerSrc}/>
-        }
+      )}
       <div className="input_container w-full relative">
         {fileUploadStart && (
           <div className="w-1/2 h-20 bg-[color:var(--bg-secondary)] absolute top-0 right-3 -translate-y-20 flex flex-col p-2 rounded-lg">

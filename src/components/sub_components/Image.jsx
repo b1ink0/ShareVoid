@@ -2,6 +2,7 @@ import React, { memo, useEffect, useState } from "react";
 import useFunction from "../../hooks/useFunction";
 import { useIndexedDB } from "react-indexed-db";
 import Message from "./Message";
+import { useStateContext } from "../../context/StateContext";
 function Image({
   text,
   file,
@@ -10,6 +11,7 @@ function Image({
   sharechatRef,
   setDisplayCopied,
   setImageViewerSrc,
+  imgSrc
 }) {
   const { handleDecryptFile, handleDecrypt } = useFunction();
   const [src, setSrc] = useState("");
@@ -61,14 +63,18 @@ function Image({
     <div
       className={`${
         src === "" ? "w-[60%]" : "max-w-[60%]"
-      } max-h-96 flex flex-col justify-end p-2 mb-2 rounded-lg items-end ${
+      } max-h-[400px] flex flex-col justify-end p-2 mb-2 rounded-lg items-end ${
         !sender ? "bg-[color:var(--bg-secondary)]" : "bg-gray-700"
       }`}
     >
       {text && <Message text={text} setDisplayCopied={setDisplayCopied} />}
       {src !== "" ? (
         <div className="w-full h-full overflow-auto">
-          <img onClick={() => setImageViewerSrc(src)} className="object-contain w-auto h-auto" src={src} />
+          <img
+            onClick={() => setImageViewerSrc(src)}
+            className="object-contain w-auto h-auto"
+            src={src}
+          />
         </div>
       ) : (
         <div className="w-full flex justify-center items-center">
