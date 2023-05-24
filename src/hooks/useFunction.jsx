@@ -55,6 +55,16 @@ export default function useFunction() {
     });
   };
   //
+  const handleFileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      var fr = new FileReader();
+      fr.onload = () => {
+        resolve(fr.result);
+      };
+      fr.readAsDataURL(file);
+    });
+  };
+  //
   const handleEncryptText = async (text, key) => {
     return AES.encrypt(JSON.stringify(text), key).toString();
   };
@@ -68,10 +78,8 @@ export default function useFunction() {
   };
   //
   const handleEncryptFile = async (file, key) => {
-    console.log(file);
-    let f = await handleReadFile(file);
-    f = new Uint8Array(f);
-    f = Buffer.from(f).toString("base64");
+    let f = await handleFileToBase64(file);
+    console.log(f.slice(0, 100));
     f = AES.encrypt(f, key).toString();
     f = new File([f], file.name + ".enc");
     return f;
@@ -80,9 +88,9 @@ export default function useFunction() {
   const handleDecryptFile = async (file, key) => {
     let f = await file.text();
     f = AES.decrypt(f, key).toString(enc.Utf8);
-    f = Buffer.from(f, "base64");
+    f = await fetch(f);
+    f = await f.blob();
     f = new File([f], "text.png");
-    console.log(f.size);
     return f;
   };
   //
@@ -99,7 +107,6 @@ export default function useFunction() {
     document.body.removeChild(input);
     return result;
   };
-  //
   //
   const handleDownloadJSON = (key, name) => {
     var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(key);
